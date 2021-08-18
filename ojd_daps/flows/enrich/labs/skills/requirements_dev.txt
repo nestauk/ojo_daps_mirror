@@ -1,0 +1,10 @@
+# Requirements for prototyping
+seaborn
+plotly
+#spacy_sentence_bert=0.1.2
+#rake-nltk==1.0.4
+#spacy_sentence_bert=0.1.2
+#rake-nltk==1.0.4
+altair-saver
+selenium
+webdriver-manager

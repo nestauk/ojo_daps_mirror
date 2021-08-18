@@ -1,0 +1,30 @@
+name: Create pre-release tag
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  make_tag:
+    runs-on: ubuntu-latest
+    name: Create a tag from dev
+
+    # ----------------------------
+    # Actions
+    steps:
+      # Checkout
+      - name: Checkout the repo
+        uses: actions/checkout@v2
+      # Determine the tag
+      - name: Extract the tag name from the VERSION file
+        run: |
+          TAG=$(cat ${{ github.event.repository.name }}/VERSION)
+          echo "tag=${TAG}" >> $GITHUB_ENV
+      # Pre-release
+      - uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.tag }}
+          token: ${{ secrets.ACCESS_TOKEN }}  # PAT required to trigger next workflow
+          omitBody: true
+          prerelease: true

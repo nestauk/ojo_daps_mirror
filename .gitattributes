@@ -1,0 +1,13 @@
+.gitattributes !filter !diff
+.env filter=git-crypt diff=git-crypt
+ojd_daps/config/** filter=git-crypt diff=git-crypt
+ojd_daps/config/metaflowtask/** !filter !diff
+ojd_daps/flows/collect export-ignore
+ojd_daps/config export-ignore
+ojd_daps/deploy export-ignore
+ojd_daps/tasks/collect.py export-ignore
+/README.md export-ignore
+################################################################
+### Text automatically added by daps-utils calver-init ###
+ojd_daps/VERSION merge=always-ours
+################################################################

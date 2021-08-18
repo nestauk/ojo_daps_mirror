@@ -1,0 +1,6 @@
+metaflow==2.2.11
+git+git://github.com/nestauk/daps_utils@dev
+mysql-connector-python==8.0.23
+numpy==1.21.1
+bs4==0.0.1
+lxml==4.6.3

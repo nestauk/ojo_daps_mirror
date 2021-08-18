@@ -1,0 +1,37 @@
+name: Generate Pipfile and Pipfile.lock from the requirements file
+
+on:
+  pull_request:
+    paths:
+      - 'ojd_daps/requirements.txt'
+
+jobs:
+  generate_pipfile:
+    runs-on: ubuntu-latest
+    # ----------------------------                              
+    # Actions                                                   
+    steps:
+      # Checkout and install python                               
+      - name: Checkout the repo
+        uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Install pipenv
+        run: pip install pipenv
+      # Generate and copy to deploy
+      - name: Generate the Pipfile
+        run: |
+          cd ojd_daps
+          pipenv install --python 3.8
+          mv Pipfile* deploy/
+      # Commit the change
+      - name: Commit
+        run: |
+          git config --global user.name 'NestaBot'
+          git config --global user.email 'software_development@nesta.org.uk'
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY
+          git fetch
+          git checkout ${GITHUB_HEAD_REF}
+          git commit -am "Updated Pipfile and Pipfile.lock"
+          git push

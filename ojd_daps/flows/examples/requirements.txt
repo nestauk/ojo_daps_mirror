@@ -1,0 +1,5 @@
+metaflow==2.2.11
+requests_cache==0.5.2
+git+git://github.com/nestauk/daps_utils@dev
+numpy==1.21.1
+requests==2.22.0

@@ -1,0 +1,6 @@
+################################################################
+### Text automatically added by daps-utils calver-init ###
+[merge "always-ours"]
+    name = Merge Ours
+    driver = true
+################################################################

@@ -1,0 +1,44 @@
+# ---------------------------------
+# Globals / defaults
+dist: xenial
+os: linux
+addons:
+  apt:
+    sources:
+      - docker-xenial
+services:
+  - mysql
+cache: pip
+install:
+  - virtualenv venv/
+  - source venv/bin/activate
+  - pip install --upgrade setuptools
+  - python setup.py install
+  - pip uninstall -y ojd-daps
+before_script:
+  - export PYTHONPATH=$PWD
+  - rm -r ojd_daps/config/*
+  # NB: If you want any config for Travis, then make it yourself here:
+  - echo -e "[mysqldb]\nuser=travis" > ojd_daps/config/mysqldb.config
+  - echo -e "dummy" > ojd_daps/config/extract.yaml # dummy
+  - sudo rm -f /etc/boto.cfg
+  - mysql -e 'CREATE DATABASE tests;'
+  - mysql_upgrade -u root --force
+  - sudo service mysql restart
+branches:
+  only:
+    - dev
+# ---------------------------------
+# Specify job grid
+jobs:
+  include:
+    # ---------------------------------
+    - name: Flow tests (Linux)
+      language: python
+      python: 3.7
+      script: .travis/flows.sh
+    # ---------------------------------
+    - name: Tasks and ORM tests (Linux)
+      language: python
+      python: 3.7
+      script: .travis/other.sh

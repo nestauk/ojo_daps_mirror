@@ -1,0 +1,43 @@
+name: Create public mirror of repo
+
+on:
+  push:
+    branches:
+      - dev
+
+  workflow_dispatch:
+
+jobs:
+  make_mirror:
+    runs-on: ubuntu-latest
+    name: Create a public version of the state of dev
+
+    # ----------------------------
+    # Actions
+    steps:
+      - name: Get private tarball from GitHub
+        run: |
+          wget --header="Authorization: token ${{ secrets.ACCESS_TOKEN }}" --header="Accept:application/vnd.github.v3.raw" -O repo.tar https://api.github.com/repos/nestauk/ojd_daps/tarball/203_public_mirror
+      - name: Checkout the public mirror repo
+        uses: actions/checkout@v2
+        with:
+          path: public
+          repository: nestauk/ojo_daps_mirror
+          ref: main
+          token: ${{ secrets.ACCESS_TOKEN }}
+          fetch-depth: 0
+      - name: Import the tar to public mirror repo
+        run: |
+          cd "$GITHUB_WORKSPACE"/public
+          git rm -rf .
+          tar -xf "$GITHUB_WORKSPACE"/repo.tar --strip-components=1
+          mv .mirror/README.md ./
+      - name: Commit and push public update
+        run: |
+          cd "$GITHUB_WORKSPACE"/public
+          git config --global user.name 'NestaBot'
+          git config --global user.email 'software_development@nesta.org.uk'
+          git add .
+          git commit -m "update $(date) $(cat ojd_daps/VERSION)"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/nestauk/ojo_daps_mirror
+          git push origin main

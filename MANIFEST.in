@@ -1,0 +1,3 @@
+include ojd_daps/VERSION
+recursive-include ojd_daps/flows/ *
+recursive-include ojd_daps/config/ *

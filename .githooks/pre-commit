@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+function branchStartsWithNumber {
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    ISSUE_NUMBER=(${CURRENT_BRANCH//_/ })
+    [ -n "$ISSUE_NUMBER" ] && [ "$ISSUE_NUMBER" -eq "$ISSUE_NUMBER" ] 2> /dev/null
+    if [ $? -ne 0 ]; then
+	echo "Error: Branch ${CURRENT_BRANCH} does not start with a relevant issue number" >&2
+	exit 1
+    fi
+}
+
+function mustBeInstalled {
+    if ! [ -x "$(command -v $1)" ]; then
+	echo "Error: $1 must be installed." >&2
+	exit 1
+    fi
+}
+
+function forbidCommitTo {
+    branch="$(git rev-parse --abbrev-ref HEAD)"
+    if [ "$branch" == "$1" ]; then
+	echo "Error: Do not work directly on $1 branch. Checkout a new or different branch first." >&2
+	exit 1
+    fi
+}
+
+
+forbidCommitTo "dev"
+forbidCommitTo "master"
+branchStartsWithNumber
+mustBeInstalled "git-crypt"
+################################################################
+### Text automatically added by daps-utils calver-init ###
+set -e
+function incrementVersion {
+    CALVER=$(date +"%y.%m.%d")
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    PROJECT_ROOT=${PWD##*/}
+    echo -n $CALVER.$CURRENT_BRANCH > ${PROJECT_ROOT}/VERSION
+    git add ${PROJECT_ROOT}/VERSION
+}
+incrementVersion
+################################################################

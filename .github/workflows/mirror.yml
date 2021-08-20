@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Get private tarball from GitHub
         run: |
-          wget --header="Authorization: token ${{ secrets.ACCESS_TOKEN }}" --header="Accept:application/vnd.github.v3.raw" -O repo.tar https://api.github.com/repos/nestauk/ojd_daps/tarball/203_public_mirror
+          wget --header="Authorization: token ${{ secrets.ACCESS_TOKEN }}" --header="Accept:application/vnd.github.v3.raw" -O repo.tar https://api.github.com/repos/nestauk/ojd_daps/tarball/dev
       - name: Checkout the public mirror repo
         uses: actions/checkout@v2
         with:

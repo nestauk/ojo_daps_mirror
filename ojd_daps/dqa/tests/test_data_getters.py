@@ -5,9 +5,12 @@ from ojd_daps.dqa.data_getters import (
     get_db_job_ads,
     get_locations,
     get_location_lookup,
-    query_salary,
     get_salaries,
+    get_skills,
+    get_requires_degree,
 )
+
+from ojd_daps.dqa.data_getters import Decimal
 
 
 PATH = "ojd_daps.dqa.data_getters.{}"
@@ -45,8 +48,7 @@ def test_get_s3_job_ads_sample(mocked_boto, mocked_get_bkt):
 def test_get_db_job_ads_limit(mocked_db):
     mocked_db.object_as_dict.side_effect = lambda x: {"id": x.id}
     session = mocked_db.db_session().__enter__()
-    query = session.query().filter().order_by()
-
+    query = session.query().order_by()
     # Create objects with an id attribute
     objs = []
     for i in range(0, 10):
@@ -58,7 +60,8 @@ def test_get_db_job_ads_limit(mocked_db):
 
     # Check limit works
     for limit in range(7, 213):
-        ad_iter = get_db_job_ads("reed", chunksize=10, limit=limit)
+        print(limit)
+        ad_iter = get_db_job_ads(chunksize=10, limit=limit)
         assert len(list(ad_iter)) == limit
 
 
@@ -66,7 +69,7 @@ def test_get_db_job_ads_limit(mocked_db):
 def test_get_db_job_ads_chunksize(mocked_db):
     mocked_db.object_as_dict.side_effect = lambda x: {"id": x.id}
     session = mocked_db.db_session().__enter__()
-    query = session.query().filter().order_by()
+    query = session.query().order_by()
 
     # Create objects with an id attribute
     objs = []
@@ -78,23 +81,49 @@ def test_get_db_job_ads_chunksize(mocked_db):
     query.filter().limit.return_value = objs[:8]  # len != chunksize
 
     # Check limit works
-    ad_iter = get_db_job_ads("reed", chunksize=10, limit=12)
+    ad_iter = get_db_job_ads(chunksize=10, limit=12)
     assert len(list(ad_iter)) == 12
 
     # Check chunksize works
-    ad_iter = get_db_job_ads("reed", chunksize=10)  # no limit
+    ad_iter = get_db_job_ads(chunksize=10)  # no limit
     assert len(list(ad_iter)) == 18
 
 
+@mock.patch(
+    PATH.format("get_location_lookup"),
+    return_value={"location_1": "foo", "location_3": "bar"},
+)
 @mock.patch(PATH.format("db"))
-def test_get_locations(mocked_db):
+def test_get_locations(mocked_db, mocked_get_location_lookup):
     session = mocked_db.db_session().__enter__()
-    query = session.query().distinct().filter().outerjoin()
-    query.all.return_value = [(1, 2), ("3", "4")]
+    query = session.query().distinct().outerjoin()
+    query.all.return_value = [
+        ("id_1", "location_1"),
+        ("id_2", None),
+        ("id_3", "location_3"),
+    ]
+    assert list(get_locations("nuts_2", do_lookup=True)) == [
+        {"job_id": "id_1", "nuts_2_code": "location_1", "nuts_2_name": "foo"},
+        {"job_id": "id_3", "nuts_2_code": "location_3", "nuts_2_name": "bar"},
+    ]
 
-    assert get_locations("dummy", "blah") == [
-        {"job_id": 1, "blah_code": 2},
-        {"job_id": "3", "blah_code": "4"},
+
+@mock.patch(
+    PATH.format("get_location_lookup"),
+    return_value={"location_1": "foo", "location_3": "bar"},
+)
+@mock.patch(PATH.format("db"))
+def test_get_locations_no_lookup(mocked_db, mocked_get_location_lookup):
+    session = mocked_db.db_session().__enter__()
+    query = session.query().distinct().outerjoin()
+    query.all.return_value = [
+        ("id_1", "location_1"),
+        ("id_2", None),
+        ("id_3", "location_3"),
+    ]
+    assert list(get_locations("nuts_2", do_lookup=False)) == [
+        {"job_id": "id_1", "nuts_2_code": "location_1"},
+        {"job_id": "id_3", "nuts_2_code": "location_3"},
     ]
 
 
@@ -128,23 +157,61 @@ def test_get_location_lookup(mocked_db):
 
 
 @mock.patch(PATH.format("db"))
-def test_query_salary(mocked_db):
-    mocked_db.object_as_dict.side_effect = lambda x: x
+def test_get_salaries(mocked_db):
     session = mocked_db.db_session().__enter__()
-    query = session.query().filter()
-    query.all.return_value = [1, 2, 3, "4"]
-    assert list(query_salary()) == [1, 2, 3, "4"]
+    session.query().all.return_value = [
+        {
+            "id": "foo",
+            "__version__": "bar",
+            "a_decimal": Decimal("12.3"),
+            "a_float": 23.4,
+            "a_str": "45.6",
+        }
+    ]
+    mocked_db.object_as_dict.side_effect = lambda x: x
+    assert list(get_salaries()) == [
+        {"job_id": "foo", "a_decimal": 12.3, "a_float": 23.4, "a_str": "45.6"}
+    ]
 
 
-@mock.patch(PATH.format("query_salary"))
-def test_get_salaries(mocked_query_salary):
-    mocked_query_salary.side_effect = lambda rate: [{"id": "1234", "salary": "100"}] * 2
+@mock.patch(PATH.format("db"))
+def test_get_skills(mocked_db):
+    session = mocked_db.db_session().__enter__()
+    session.query().all.return_value = [
+        {
+            "job_data_source": "foo",
+            "job_id": 123,
+            "__version__": "bar",
+            "a_decimal": Decimal("12.3"),
+            "a_float": 23.4,
+            "a_str": "45.6",
+        }
+    ]
+    mocked_db.object_as_dict.side_effect = lambda x: x
+    assert list(get_skills()) == [
+        {"job_id": "123", "a_decimal": 12.3, "a_float": 23.4, "a_str": "45.6"}
+    ]
 
-    assert get_salaries() == [
-        {"id": "1234", "salary": 100, "rate": "per annum"},
-        {"id": "1234", "salary": 100, "rate": "per annum"},
-        {"id": "1234", "salary": 100 * 52 * 5, "rate": "per day"},
-        {"id": "1234", "salary": 100 * 52 * 5, "rate": "per day"},
-        {"id": "1234", "salary": 100 * 52 * 37.5, "rate": "per hour"},
-        {"id": "1234", "salary": 100 * 52 * 37.5, "rate": "per hour"},
+
+@mock.patch(PATH.format("db"))
+def test_get_requires_degree(mocked_db):
+    session = mocked_db.db_session().__enter__()
+    session.query().all.return_value = [
+        {
+            "id": "1234",
+            "__version__": "bar",
+            "a_decimal": Decimal("12.3"),
+            "a_float": 23.4,
+            "a_str": "45.6",
+        }
+    ]
+    mocked_db.object_as_dict.side_effect = lambda x: x
+
+    assert list(get_requires_degree()) == [
+        {
+            "job_id": "1234",
+            "a_decimal": Decimal("12.3"),
+            "a_float": 23.4,
+            "a_str": "45.6",
+        }
     ]

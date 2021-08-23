@@ -13,20 +13,9 @@ from decimal import Decimal
 from daps_utils import db
 from ojd_daps.flows.collect.common import get_metaflow_bucket
 from ojd_daps.orms.raw_jobs import RawJobAd, JobAdDescriptionVector
-from ojd_daps.orms.std_features import Location, Salary, SOC
-from ojd_daps.orms.link_tables import JobAdLocationLink, JobAdSOCLink
+from ojd_daps.orms.std_features import Location, Salary, SOC, RequiresDegree
+from ojd_daps.orms.link_tables import JobAdLocationLink, JobAdSOCLink, JobAdSkillLink
 from ojd_daps.dqa.vector_utils import download_vectors
-
-# <<<<
-# Workaround for the hackweek
-import ojd_daps
-
-db.CALLER_PKG = ojd_daps
-# Uncomment and fill out the following if you want to specify a backup database
-db.CALLER_PKG.config["mysqldb"]["mysqldb"][
-    "host"
-] = "ojo-backup-2021-07-16-04-40.ci9272ypsbyf.eu-west-2.rds.amazonaws.com"
-# >>>>
 
 CENTRAL_BUCKET = "most_recent_jobs"
 
@@ -36,9 +25,11 @@ def get_s3_job_ads(job_board, read_body=True, sample_ratio=1):
 
     Args:
         job_board (str): Assumed to be 'reed'
-        read_body (bool): If you really don't need to look at the text, set this to False to speed things up.
-        sample_ratio (float): If you need to reduce the sample size randomly, scale this down appropriately
-                             (i.e. 0.02 means randomly reject 98% of the data).
+        read_body (bool): If you really don't need to look at the text, set this to
+                          False to speed things up.
+        sample_ratio (float): If you need to reduce the sample size randomly, scale
+                              this down appropriately
+                              (i.e. 0.02 means randomly reject 98% of the data).
     Yields:
          A job advert "object" in dict form
     """
@@ -205,6 +196,41 @@ def get_soc():
             yield row
 
 
+def get_requires_degree():
+    """
+    Retrieve requires_degree flag which we have assigned to each job advert.
+
+    Yields:
+        row (dict): Job advert IDs matched to a boolean flag.
+    """
+    with db.db_session("production") as session:
+        for row in map(db.object_as_dict, session.query(RequiresDegree).all()):
+            # RequiresDegree isn't a link table so id means job_id
+            row["job_id"] = str(row.pop("id"))
+            # Don't need the __version__ field, this is implied in the job_ads data
+            row.pop("__version__")
+            yield row
+
+
+def get_skills():
+    """
+    Retrieve skills group data which we have assigned to each job advert.
+
+    Yields:
+        row (dict): Job advert IDs matched to a skills group.
+    """
+    with db.db_session("production") as session:
+        for row in map(db.object_as_dict, session.query(JobAdSkillLink).all()):
+            # Don't need the __version__ field, this is implied in the job_ads data
+            row.pop("job_data_source")
+            row.pop("__version__")
+            row["job_id"] = str(row.pop("job_id"))
+            yield {
+                column: (float(value) if type(value) is Decimal else value)
+                for column, value in row.items()
+            }
+
+
 @lru_cache()
 def get_features(location_level="nuts_2"):
     """
@@ -221,6 +247,8 @@ def get_features(location_level="nuts_2"):
         ("salary", get_salaries),
         ("location", lambda: get_locations(location_level, do_lookup=True)),
         ("soc", get_soc),
+        ("skills", get_skills),
+        ("requires_degree", get_requires_degree),
     ]
     # Generate the feature collection for all job adverts
     features = defaultdict(dict)

@@ -42,3 +42,8 @@ jobs:
       language: python
       python: 3.7
       script: .travis/other.sh
+    # ---------------------------------
+    - name: data_getter tests (Linux)
+      language: python
+      python: 3.7
+      script: .travis/dqa.sh

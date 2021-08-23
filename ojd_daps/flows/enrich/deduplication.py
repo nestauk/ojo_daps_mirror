@@ -7,236 +7,260 @@ A Flow for identifying duplicate job advert descriptions.
 import os
 
 os.system(
-    f'pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null'
-    )
+    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
+)
 import json
-import re
 import numpy as np
-import logging
-
-from metaflow import FlowSpec, step, S3, Parameter, batch, resources
-from datetime import datetime, timedelta
-
-from ojd_daps.orms.raw_jobs import JobAdDescriptionVector, RawJobAd
-
-from daps_utils import talk_to_luigi, db
-from daps_utils.flow import DapsFlowMixin
-from daps_utils.db import db_session, object_as_dict
-
-import ojd_daps
-from daps_utils import db
-db.CALLER_PKG = ojd_daps
-db_session = db.db_session
+from functools import partial
+from metaflow import FlowSpec, step, S3, batch, conda
+from daps_utils import talk_to_luigi, DapsFlowMixin
+from datetime import timedelta
+from sqlalchemy import func
 
 FLOAT_TYPE = np.float32
-STR_TYPE = np.dtype('U40')
-CHUNKSIZE = 20000
+STR_TYPE = np.dtype("U40")
+CHUNKSIZE = 10000
 VECTOR_DIM = 768
-INTERVAL = 56 # 8 weeks
+INTERVAL = 56  # 8 weeks
+LIMIT = 2  # number of windows in testing
 
-def sliding_window_getter(job_ads, interval):
+
+def get_sliding_windows(start_date, end_date, interval):
+    """
+    Create a set of sliding window intervals between the given dates,
+    with the successive windows sliding by half an interval. The interval
+    is defined in days.
+    """
+    one_interval = timedelta(days=interval)
+    half_interval = timedelta(days=interval / 2)
     windows = []
-    max_date = max(job_ads, key=lambda x:x['created'])
-    min_date = min(job_ads, key=lambda x:x['created'])
-    window_start_date = min_date['created']
-    while window_start_date < max_date['created']:
-        windows.append([window_start_date, window_start_date+timedelta(days=interval)])
-        window_start_date = window_start_date + timedelta(days=interval/2)
+    while start_date < end_date:
+        # Cast dates to str to enable `literal_binds` to work later
+        windows.append([str(start_date), str(start_date + one_interval)])
+        start_date += half_interval
     return windows
 
 
-def query_and_bundle(session, fields, offset, limit, filter_):
-    """Query the database for a list of SqlAlchemy fields,
-    and apply limits, offsets and filters as required. The results
-    are bundled into numpy arrays."""
-    q = session.query(*fields)  # raw query
-    q = q.offset(offset) if filter_ is None else q.filter(filter_)  # filter / offset
-    ids, vectors = zip(*q.limit(limit))  # unravel results
-    vectors = list(map(json.loads, vectors))  # cast str-json to json
-    # bundle into arrays
+def query_and_bundle(session, query):
+    """
+    Query the database for the job ad IDs and vectors, and then bundle the
+    results into numpy arrays.
+    """
+    ids, vectors = zip(*session.execute(query).fetchall())  # Unravel results
+    vectors = list(map(json.loads, vectors))  # Cast str-json to json
+    # Bundle into arrays
     _ids = []
     _vectors = []
     for i, element in enumerate(vectors):
         try:
             np.array(element, dtype=FLOAT_TYPE)
+        except ValueError:
+            _ids.append("")
+            _vectors.append(np.zeros(VECTOR_DIM))
+        else:
             _ids.append(ids[i])
             _vectors.append(element)
-        except ValueError:
-            _ids.append('')
-            _vectors.append(np.zeros(VECTOR_DIM))
     _ids = np.array(_ids, dtype=STR_TYPE)
-    _vectors = np.array(_vectors, dtype=STR_TYPE)
+    _vectors = np.array(_vectors, dtype=FLOAT_TYPE)
     return _ids, _vectors
 
 
-def prefill_inputs(orm, session):
-    """For performance, preallocate numpy arrays to be filled later.
-    Numpy array size to be determined dynamically, based on vector dimensions
-    from the DB and count of vectors in the DB.
+def prefill_inputs(count):
     """
-    # Determine the "height" and "width" of the array
-    # by asking the database
-    count = session.query(orm).count()  # "Height" of array
+    For performance, preallocate numpy arrays to be filled later.
+    Numpy array size to be determined dynamically
+    """
     # Preallocate space
     data = np.empty((count, VECTOR_DIM), dtype=FLOAT_TYPE)
-    ids = np.empty((count, ), dtype=STR_TYPE)
+    ids = np.empty((count,), dtype=STR_TYPE)
     return data, ids
 
 
-def read_data(
-    data,
-    ids,
-    orm,
-    id_field,
-    session,
-    chunksize=10000,
-    max_chunks=None,
-):
-    """Read data into the data and id arrays,
-    always starting from the last read chunk (e.g. if connection fails).
-    Data is read using the last available id,
-    since filtering is much faster than offsetting, for large datasets.
+def create_base_query(session, fields, start_date, end_date):
     """
-    id_field = getattr(orm, id_field)
-    fields = (id_field, orm.vector)
-    count, _ = data.shape
-    empty_ids = ids != ""
-    offset = sum(empty_ids)  # resume if already started
-    # Calculate a filter statement, since these are faster than OFFSET
-    filter_ = None if offset == 0 else id_field > ids[offset - 1]
-    # Set default values of {n,max}_chunks
-    n_chunks = -1 if max_chunks is None else 0
-    max_chunks = 0 if max_chunks is None else max_chunks
-    # Start or continue collecting filling the data and id arrays
-    while offset < count:
-        if n_chunks >= max_chunks:
-            # Note: this never happens if max_chunks is set to default
-            break
-        if offset % 10 * chunksize == 0:
-            logging.info(f"Collecting row {offset+1} of {count}")
-        # Query the database and bundle the results into intermediate arrays
-        limit = chunksize if offset + chunksize < count else None
-        _ids, _data = query_and_bundle(session, fields, offset, limit, filter_)
+    Generate a standard query for vectors in a sliding window.
+    """
+    from ojd_daps.orms.raw_jobs import JobAdDescriptionVector as Vector
+    from ojd_daps.orms.raw_jobs import RawJobAd
+
+    query = session.query(*fields)
+    query = query.join(RawJobAd, Vector.id == RawJobAd.id)
+    query = query.filter(RawJobAd.created.between(start_date, end_date))
+    return query
+
+
+def read_data(data, ids, session, queries):
+    """
+    Iterate over prewritten SQL queries to read data into the preallocated
+    `data` and `ids` arrays.
+    """
+    offset = 0
+    for query in queries:
+        _ids, _data = query_and_bundle(session, query)
         # Update the preallocated arrays
         ids[offset : offset + _ids.shape[0]] = _ids  # pylint: disable=E1136
         data[offset : offset + _data.shape[0]] = _data  # pylint: disable=E1136
         # Update the filter/offset criteria
-        filter_ = id_field > _ids[-1]
-        offset += chunksize
-        # Increment the number of chunks we've processed thus far
-        if max_chunks > 0:
-            # Note: this never happens if max_chunks is set to default
-            n_chunks += 1
+        offset += CHUNKSIZE
 
 
-def download_vectors(orm, id_field, database, session,
-                    chunksize=10000, max_chunks=None):
-    """Download vectors from the DB"""
-    data, ids = prefill_inputs(orm, session)  # Empty numpy arrays
+def query_to_str(query):
+    """
+    Convert a SqlAlchemy query to a raw SQL query, with all parameters
+    parsed into the raw query ("literal_binds").
+    """
+    return str(query.statement.compile(compile_kwargs={"literal_binds": True}))
+
+
+def download_vectors(session, queries, count, max_errors=100):
+    """
+    Download vectors from the DB, taking into account the possibility
+    of mysterious json.JSONDecodeErrors
+    """
+    data, ids = prefill_inputs(count)  # Empty numpy arrays
+    n_errors = 0
     while "reading data":
         try:
             # Start or continue reading
-            read_data(
-                data=data,
-                ids=ids,
-                orm=orm,
-                session=session,
-                id_field=id_field,
-                chunksize=chunksize,
-                max_chunks=max_chunks,
-            )
-        # The following has only been found to happen if your
-        # connection drops slightly, which corrupts the JSON
+            read_data(data=data, ids=ids, session=session, queries=queries)
+        # The following transient error can happen, unknown reason
         except json.JSONDecodeError:
+            n_errors += 1
+            if n_errors == max_errors:
+                raise
             continue  # Retry
         else:
             break  # Done
-    # Truncate the results, to remove unallocated entries
-    # (this happens when max_chunks is not None)
-    done_rows = ids != ""
-    ids = ids[done_rows]
-    data = data[done_rows]
-    # Return
     return data, ids
+
+
+def generate_window_query_chunks(session, start_date, end_date):
+    """
+    Generate every JobAdDescriptionVector query between two dates.
+
+    The method here is to get the PKs at each interval, in order to
+    construct queries for job ads in a PK range.
+    """
+    from ojd_daps.orms.raw_jobs import JobAdDescriptionVector as Vector
+
+    _create_query = partial(  # create_base_query is called twice, so use partial
+        create_base_query,
+        session=session,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    # Get the query for this window
+    vector_query = _create_query(fields=(Vector.id, Vector.vector))
+    # Get the counts, to be used later for prefilling inputs
+    ids_query = _create_query(fields=(Vector.id,))
+    count = ids_query.count()  # Total number of job ad vectors
+    # Generate every query in chunks
+    raw_queries = []
+    total = 1  # For while-loop book keeping
+    (lower_pk,) = ids_query.limit(1).one()  # Get the first PK, for the first window
+    while total < count:
+        is_final_query = count - total < CHUNKSIZE
+        # Find the next PK for this chunk
+        above = Vector.id >= lower_pk
+        offset = None if is_final_query else CHUNKSIZE
+        (upper_pk,) = ids_query.filter(above).offset(offset).limit(1).one()
+        # Generate a query for vectors is `above` the lower PK and `below` the upper PK
+        below = Vector.id < upper_pk
+        query = vector_query.filter(above)
+        if not is_final_query:  # Don't need `below` filter for the final chunk
+            query = query.filter(below)
+        # Convert the SqlAlchemy query to a raw SQL query
+        raw_queries.append(query_to_str(query))
+        # Swap in the new lower_pk
+        lower_pk = upper_pk
+        total += CHUNKSIZE
+    return raw_queries, count
+
 
 @talk_to_luigi
 class DeduplicationFlow(FlowSpec, DapsFlowMixin):
-
     @step
     def start(self):
         """
         Starts the flow.
         """
-        self.next(self.get_vectors)
+        # >>> Workaround for metaflow introspection
+        import ojd_daps
 
-    @step
-    def get_vectors(self):
-        """
-        Downloads the vectors
-        """
-        with db_session(database=self.db_name) as session:
-            self.data, self.ids = download_vectors(orm=JobAdDescriptionVector,\
-                id_field='id', database=self.db_name, session=session)
+        self.set_caller_pkg(ojd_daps)
+        # <<<
         self.next(self.get_windows)
 
     @step
     def get_windows(self):
-        """Gets ads and generates 8 weekly overlapping windows
-        """
-        with db_session(database='production') as session:
-            jobad_query = session.query(RawJobAd.id, RawJobAd.created)
-            self.job_ads = [
-                {"id": _id, "created": created}
-                for _id, created in jobad_query
-            ]
-        self.ad_ids = [ad['id'] for ad in self.job_ads]
-        self.ad_created = [ad['created'] for ad in self.job_ads]
-        self.windows = sliding_window_getter(job_ads=self.job_ads, interval=INTERVAL)
-        self.next(self.get_vector_ids, foreach='windows')
+        """Gets ads and generates 8 weekly overlapping windows"""
+        from ojd_daps.orms.raw_jobs import RawJobAd
+
+        # Read from "production" to guarantee a meaningful sample in test mode
+        with self.db_session(database="production") as session:
+            # Get the earliest start and latest end date
+            query = session.query(
+                func.min(RawJobAd.created), func.max(RawJobAd.created)
+            )
+            ((start_date, end_date),) = query.all()
+        # Generate sliding windows over the start and end date
+        interval = INTERVAL / 2 if self.test else INTERVAL
+        self.windows = get_sliding_windows(
+            start_date=start_date, end_date=end_date, interval=interval
+        )
+        # Limit number of windows in test mode
+        if self.test:
+            self.windows = self.windows[:LIMIT]
+        self.next(self.generate_window_queries)
 
     @step
-    def get_vector_ids(self):
-        """For each window, finds indexes of vectors corresponding
-        to the 8 week chunk
+    def generate_window_queries(self):
         """
-        chunk = [i for i,x in enumerate(self.ad_created) if self.input[0] <= x <= self.input[1]] # find index of created dates in the window
-        id_chunk = [self.ad_ids[i] for i in chunk] # get ids of job adverts in the chunk
-        self.vector_id_chunk = [i for i,x in enumerate(self.ids.tolist()) if x in id_chunk] # get index of vectors corresponding to job ad ids
-        self.next(self.join_vector_ids)
-
-    @step
-    def join_vector_ids(self, inputs):
-        """Joins foreach outputs, persists ids and data
+        For each time window, generate a set of filter/offset queries
+        which will be used in the foreach/batch step (i.e. find_similar_vectors)
+        to read the data for that window in chunks. Note that for each window,
+        the output contains the set of queries `raw_queries` and also `count`,
+        which is the number of job ads in window, and is required for preallocating
+        the data and ID arrays.
         """
-        self.vector_id_chunks = [input.vector_id_chunk for input in inputs if len(input.vector_id_chunk) > 0]
-        self.ids = inputs[0].ids
-        self.data = inputs[0].data
-        self.next(self.pre_find_similar_vectors)
+        self.window_queries = []
+        with self.db_session(database="production") as session:
+            for start_date, end_date in self.windows:
+                raw_queries, count = generate_window_query_chunks(
+                    session, start_date, end_date
+                )
+                self.window_queries.append((raw_queries, count))
+        self.next(self.find_similar_vectors, foreach="window_queries")
 
-    @step
-    def pre_find_similar_vectors(self):
-        """Dummy step to separate previous join from next for each
-        """
-        self.next(self.find_similar_vectors, foreach='vector_id_chunks')
-
+    @batch(cpu=8, memory=16000)
     @step
     def find_similar_vectors(self):
         """
-        Finds similar vectors
+        Reads vectors from the DB and then finds similar vectors
         """
         from labs.deduplication.faiss_utils import apply_model
-        ids = np.array([self.ids[i] for i in self.input], dtype=STR_TYPE)
-        data = np.array([self.data[i] for i in self.input], dtype=FLOAT_TYPE)
-        self.similar_vectors = apply_model(data, ids)
-        first_id = self.ids[0]
-        last_id = self.ids[-1]
-        data = [{"first_id": _id1, "second_id": _id2, "weight": weight}
-            for _id1, sims in self.similar_vectors.items()
-            for _id2, weight in sims.items()]
-        filename = f'deduplication_{first_id}-{last_id}_test-{self.test}.json'
+
+        # Read vectors from the database
+        queries, count = self.input
+        with self.db_session(database="production") as session:
+            data, ids = download_vectors(session, queries, count)
+        assert len(list(ids.flatten())) == count  # Sanity check (internal consistency)
+
+        # Find the similar vectors
+        similar_vectors = apply_model(data, ids)
+        # Reformat the data for saving
+        data = [
+            {"first_id": _id1, "second_id": _id2, "weight": weight}
+            for _id1, sims in similar_vectors.items()
+            for _id2, weight in sims.items()
+        ]
+        # Save the output chunk
+        first_id = data[0]["first_id"]
+        last_id = data[-1]["first_id"]
+        filename = f"deduplication_{first_id}-{last_id}_test-{self.test}.json"
         with S3(run=self) as s3:
             data = json.dumps(data)
-            url = s3.put(filename, data)
+            s3.put(filename, data)
         self.next(self.dummy_join_step)
 
     @step
@@ -248,5 +272,5 @@ class DeduplicationFlow(FlowSpec, DapsFlowMixin):
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     DeduplicationFlow()

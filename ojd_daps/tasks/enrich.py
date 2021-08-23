@@ -15,7 +15,12 @@ from daps_utils import (
 )
 from daps_utils.db import db_session
 from ojd_daps import config
-from ojd_daps.orms.link_tables import JobAdLocationLink, JobAdSkillLink, JobAdSOCLink
+from ojd_daps.orms.link_tables import (
+    JobAdLocationLink,
+    JobAdSkillLink,
+    JobAdSOCLink,
+    JobAdDuplicateLink,
+)
 from ojd_daps.orms.raw_jobs import JobAdDescriptionVector
 from ojd_daps.orms.std_features import Location, Salary, SOC, RequiresDegree
 from sqlalchemy_utils.functions import get_declarative_base
@@ -29,6 +34,7 @@ orm_dict = {
     "skills": JobAdSkillLink,
     "soc": JobAdSOCLink,
     "requires_degree": RequiresDegree,
+    "deduplication": JobAdDuplicateLink,
     # "Pre-Enrichment" Tasks
     "vectorise_descriptions": JobAdDescriptionVector,
     "location_lookup": Location,
@@ -95,8 +101,10 @@ class RootTask(DapsRootTask):
             "test": self.test,
         }
         for flow_name, conf in config_copy.items():
-            if flow_name not in orm_dict or (self.specific_task_name is not None and
-                    self.specific_task_name != flow_name):
+            if flow_name not in orm_dict or (
+                self.specific_task_name is not None
+                and self.specific_task_name != flow_name
+            ):
                 continue
             yield EnrichmentCurateTask(
                 orm=orm_dict[flow_name],

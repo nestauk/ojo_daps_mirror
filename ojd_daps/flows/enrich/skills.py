@@ -10,35 +10,11 @@ os.system(
     f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
 )
 import json
+from common import generate_description_queries, retrieve_job_ads
+from metaflow import FlowSpec, step, S3, Parameter, batch
+from daps_utils import talk_to_luigi, DapsFlowMixin
 
-from metaflow import FlowSpec, step, S3, Parameter, batch, resources
-
-from daps_utils import talk_to_luigi, db
-from daps_utils.flow import DapsFlowMixin
-from daps_utils.db import db_session, object_as_dict
-
-# >>> Workaround for batch
-try:
-    from ojd_daps.orms.raw_jobs import RawJobAd
-except ModuleNotFoundError:
-    pass
-# <<<
-
-# >>> Workaround for batch
-try:
-    import ojd_daps
-except ModuleNotFoundError:
-    ojd_daps = None
-# <<<
-
-# >>> Workaround for metaflow introspection
-from daps_utils import db
-
-db.CALLER_PKG = ojd_daps
-db_session = db.db_session
-# <<<
-
-CHUNKSIZE = 20000
+CHUNKSIZE = 5000
 MODEL_VERSION = "v02_1"
 
 
@@ -49,6 +25,11 @@ class SkillsFlow(FlowSpec, DapsFlowMixin):
         """
         Starts the flow.
         """
+        # >>> Workaround for metaflow introspection
+        import ojd_daps
+
+        self.set_caller_pkg(ojd_daps)
+        # <<<
         self.next(self.get_adverts)
 
     @step
@@ -56,17 +37,8 @@ class SkillsFlow(FlowSpec, DapsFlowMixin):
         """
         Gets adverts, breaks up into chunks of CHUNKSIZE.
         """
-        from common import get_chunks
-
-        limit = 1000 if self.test else None
-        with db_session(database="production") as session:
-            jobad_query = session.query(
-                RawJobAd.id, RawJobAd.data_source, RawJobAd.description
-            )
-            jobad_query = jobad_query.filter(RawJobAd.id is not None)
-            job_ads = [object_as_dict(obj) for obj in jobad_query.limit(limit)]
-        self.chunks = get_chunks(job_ads, CHUNKSIZE)
-        self.next(self.extract_skills, foreach="chunks")
+        self.queries = generate_description_queries(self, CHUNKSIZE)
+        self.next(self.extract_skills, foreach="queries")
 
     @batch(cpu=4, memory=16000)
     @step
@@ -81,10 +53,11 @@ class SkillsFlow(FlowSpec, DapsFlowMixin):
             clean_text,
         )
 
+        job_ads = retrieve_job_ads(self)
         model = load_model(MODEL_VERSION)
         nlp = setup_spacy_model(model["nlp"])
         skills = []
-        for job_ad in self.input:
+        for job_ad in job_ads:
             ad_skills = detect_skills(
                 clean_text(job_ad["description"]), model, nlp, return_dict=True
             )

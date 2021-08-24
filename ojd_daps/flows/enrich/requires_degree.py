@@ -11,32 +11,13 @@ import os
 os.system(
     f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
 )
-from daps_utils import talk_to_luigi, db
+
+from common import generate_description_queries, retrieve_job_ads
+from daps_utils import talk_to_luigi
 from metaflow import FlowSpec, step, S3, batch
 from daps_utils.flow import DapsFlowMixin
 
-### Boilerplate cribbed from salaries.py
-# >>> Workaround for batch
-try:
-    from ojd_daps.orms.raw_jobs import RawJobAd
-except ModuleNotFoundError:
-    pass
-# <<<
-
-# >>> Workaround for batch
-try:
-    import ojd_daps
-except ModuleNotFoundError:
-    ojd_daps = None
-# <<<
-
-# >>> Workaround for metaflow introspection
-# from daps_utils import db -- redundant?
-
-db.CALLER_PKG = ojd_daps
-db_session = db.db_session
-# <<<
-### /Boilerplate cribbed from salaries.py
+CHUNKSIZE = 5000
 
 
 @talk_to_luigi
@@ -46,6 +27,11 @@ class RequiresDegreeFlow(FlowSpec, DapsFlowMixin):
         """
         Starts the flow.
         """
+        # >>> Workaround for metaflow introspection
+        import ojd_daps
+
+        self.set_caller_pkg(ojd_daps)
+        # <<<
         self.next(self.get_adverts)
 
     @step
@@ -53,19 +39,8 @@ class RequiresDegreeFlow(FlowSpec, DapsFlowMixin):
         """
         Gets adverts, breaks up into chunks of 20,000.
         """
-        from common import get_chunks
-        from labs.requires_degree.model import io
-
-        limit = 1000 if self.test else None
-        ## object_as_dict doesn't seem to handle this table with column selection
-        jobs = io.load_jobs(
-            limit=limit,
-            database=self.db_name,
-            columns=(RawJobAd.id, RawJobAd.description),
-        )
-        self.job_ads = list(jobs)
-        self.chunks = get_chunks(self.job_ads, 20000)
-        self.next(self.extract_requires_degree, foreach="chunks")
+        self.queries = generate_description_queries(self, CHUNKSIZE)
+        self.next(self.extract_requires_degree, foreach="queries")
 
     @batch(cpu=2, memory=8000)
     @step
@@ -75,8 +50,10 @@ class RequiresDegreeFlow(FlowSpec, DapsFlowMixin):
         """
         from labs.requires_degree import model
 
+        job_ads = retrieve_job_ads(self)
+
         requires_degree = []
-        for job_ad in self.input:
+        for job_ad in job_ads:
             requires_degree_dict = dict(requires_degree=model.apply_model(job_ad))
             requires_degree_dict["id"] = job_ad["id"]
             requires_degree.append(requires_degree_dict)

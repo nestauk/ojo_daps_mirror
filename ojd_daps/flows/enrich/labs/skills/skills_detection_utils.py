@@ -418,9 +418,7 @@ def remove_surface_forms(surface_form_df, manual_remove):
         (pandas.DataFrame): Dataframe with the new surface form and entity pairs
 
     """
-    return surface_form_df[
-        -surface_form_df.surface_form.isin(manual_remove)
-    ]
+    return surface_form_df[-surface_form_df.surface_form.isin(manual_remove)]
 
 
 def assign_surface_forms(surface_form_df, manual_assign):
@@ -482,6 +480,7 @@ def create_phrase_matcher(surface_forms, nlp):
     matcher.add("TerminologyList", patterns)
     return matcher
 
+
 def detect_skills(text, model, nlp, return_dict=False, debug=False):
     """
     Uses a spacy phrase matcher to detect skills
@@ -502,39 +501,45 @@ def detect_skills(text, model, nlp, return_dict=False, debug=False):
     matches = model["matcher"](doc)
     detected_forms = [str(doc[match[1] : match[2]]) for match in matches]
     rows = model["surface_forms"].surface_form.isin(detected_forms)
-    results_dataframe = (model["surface_forms"][rows]
-                         ).copy()
-    if not debug:
-        columns =[
+    results_dataframe = (model["surface_forms"][rows]).copy()
+    if not debug:  # TODO: remove distinct debug logic
+        # TODO: remove pandas logic
+        columns = [
             "is_predicted_OK",
             "surface_form",
             "surface_form_type",
             "preferred_label",
             "entity",
             "predicted_q",
-            'cluster_0',
-            'cluster_1',
-            'cluster_2',
-            'label_cluster_0',
-            'label_cluster_1',
-            'label_cluster_2',
-            'manual_OK'
-            ]
-        results_dataframe = (results_dataframe[columns]
-                             .sort_values('predicted_q')
-                             .query('is_predicted_OK==1 | manual_OK==1')
-                             .sort_values("surface_form_type", ascending=False)
-                             .drop('is_predicted_OK', axis=1)
-                             .drop('manual_OK', axis=1)
-                             )
+            "cluster_0",
+            "cluster_1",
+            "cluster_2",
+            "label_cluster_0",
+            "label_cluster_1",
+            "label_cluster_2",
+            "manual_OK",
+        ]
+        results_dataframe = (
+            results_dataframe[columns]
+            .sort_values("predicted_q")
+            .query("is_predicted_OK==1 | manual_OK==1")
+            .sort_values("surface_form_type", ascending=False)
+            .drop("is_predicted_OK", axis=1)
+            .drop("manual_OK", axis=1)
+        )
 
+    # TODO: remove multiple return types
     if not return_dict:
         return results_dataframe
-    else:
-        return results_dataframe.to_dict("records")
+
+    # Replace pandas/numpy null values with None, for internal consistency
+    data = results_dataframe.to_dict("records")
+    data = [{k: (None if pd.isnull(v) else v) for k, v in row.items()} for row in data]
+    return data
+
 
 ### I/O UTILS ###
-def save_model_locally(model, local_path=SKILLS_LAB_DIR/"models"):
+def save_model_locally(model, local_path=SKILLS_LAB_DIR / "models"):
     """
     Save the spacy matcher and associated data locally.
 
@@ -578,8 +583,9 @@ def save_model_in_s3(model):
     filename = DEF_MODEL_FILENAME.format(model["name"])
     save_to_s3(f"models/{filename}", pickle.dumps(model))
 
+
 @lru_cache()  # <--- Important
-def load_model(model_name="", from_local=False, local_path=SKILLS_LAB_DIR/"models"):
+def load_model(model_name="", from_local=False, local_path=SKILLS_LAB_DIR / "models"):
     """
     Loads the pickled model
 
@@ -599,21 +605,20 @@ def load_model(model_name="", from_local=False, local_path=SKILLS_LAB_DIR/"model
     """
     filename = DEF_MODEL_FILENAME.format(model_name)
     if from_local is False:
-        model = pickle.loads(
-            load_from_s3(f"models/{filename}")
-        )
+        data = load_from_s3(f"models/{filename}")
+        with BytesIO(data) as bio:
+            model = pd.read_pickle(bio)
     else:
-        model = pickle.load(
-            open(f"{local_path}/{filename}", "rb")
-        )
+        model = pickle.load(open(f"{local_path}/{filename}", "rb"))
     # Ensure that entities are integers
-    model['surface_forms'].entity = model['surface_forms'].entity.astype(int)
+    model["surface_forms"].entity = model["surface_forms"].entity.astype(int)
     return model
+
 
 def save_removed_forms(
     removed_form_dict,
     model_name,
-    local_path=SKILLS_LAB_DIR/"data/processed/surface_forms/removed",
+    local_path=SKILLS_LAB_DIR / "data/processed/surface_forms/removed",
     s3_copy=False,
 ):
     """
@@ -634,7 +639,9 @@ def save_removed_forms(
         )
 
 
-def load_removed_forms(model_name, local_path=SKILLS_LAB_DIR/"data/processed/surface_forms/removed"):
+def load_removed_forms(
+    model_name, local_path=SKILLS_LAB_DIR / "data/processed/surface_forms/removed"
+):
     """
     Loads in the surface forms that were removed when building the model.
     If such file is not found, an empty dictionary is returned.
@@ -656,23 +663,25 @@ def load_removed_forms(model_name, local_path=SKILLS_LAB_DIR/"data/processed/sur
     else:
         return json.load(open(fpath, "r"))
 
+
 @lru_cache()
-def regenerate_model(model_name='v02_1'):
-    """ Rebuilds the skills detection components from the surface form table on S3 """
+def regenerate_model(model_name="v02_1"):
+    """Rebuilds the skills detection components from the surface form table on S3"""
     # Load the surface form table
-    csv_bytes = load_from_s3(f'models/surface_forms_table_{model_name}.csv')
-    surface_form_table=pd.read_csv(BytesIO(csv_bytes))
+    csv_bytes = load_from_s3(f"models/surface_forms_table_{model_name}.csv")
+    surface_form_table = pd.read_csv(BytesIO(csv_bytes))
     # Create the phrase matcher
     nlp = setup_spacy_model()
     matcher = create_phrase_matcher(surface_form_table.surface_form.to_list(), nlp)
     # Combine all components into the 'model'
     model = {
-        'name': model_name,
-        'surface_forms': surface_form_table,
-        'matcher': matcher,
-        'nlp': DEF_LANGUAGE_MODEL
+        "name": model_name,
+        "surface_forms": surface_form_table,
+        "matcher": matcher,
+        "nlp": DEF_LANGUAGE_MODEL,
     }
     return model
+
 
 ### SKILLS ANALYSIS UTILS ###
 def count_surface_forms(detected_skills, key="surface_form"):
@@ -730,5 +739,7 @@ def frequency_refinement(surface_form_df, counts, percentile_threshold=95):
         # and that are not derived from the preferred label
         & (surface_form_counts.surface_form_type != "label_pref")
     ].surface_form.to_list()
-    rows_to_keep = (surface_form_df.surface_form.isin(forms_to_remove)==False).to_list()
+    rows_to_keep = (
+        surface_form_df.surface_form.isin(forms_to_remove) == False
+    ).to_list()
     return rows_to_keep

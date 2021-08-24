@@ -1,4 +1,4 @@
-metaflow==2.2.11
+git+git://github.com/jaklinger/metaflow@more_throttle
 requests_cache==0.5.2
 git+git://github.com/nestauk/daps_utils@dev
 numpy==1.21.1

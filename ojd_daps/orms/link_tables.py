@@ -92,7 +92,7 @@ class JobAdSkillLink(Base, LinkBase):
     surface_form = fixture("text")
     surface_form_type = fixture("text")
     preferred_label = fixture("text")
-    entity = fixture("integer")
+    entity = fixture("pk")
     predicted_q = fixture("float")
     cluster_0 = fixture("integer")
     cluster_1 = fixture("integer")

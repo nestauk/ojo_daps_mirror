@@ -8,6 +8,10 @@ from ojd_daps.dqa.data_getters import (
     get_salaries,
     get_skills,
     get_requires_degree,
+    get_duplicate_ids,
+    get_duplicate_subgraphs,
+    get_subgraphs_by_location,
+    identify_duplicates,
 )
 
 from ojd_daps.dqa.data_getters import Decimal
@@ -48,7 +52,7 @@ def test_get_s3_job_ads_sample(mocked_boto, mocked_get_bkt):
 def test_get_db_job_ads_limit(mocked_db):
     mocked_db.object_as_dict.side_effect = lambda x: {"id": x.id}
     session = mocked_db.db_session().__enter__()
-    query = session.query().order_by()
+    query = session.query().filter().order_by()
     # Create objects with an id attribute
     objs = []
     for i in range(0, 10):
@@ -69,7 +73,7 @@ def test_get_db_job_ads_limit(mocked_db):
 def test_get_db_job_ads_chunksize(mocked_db):
     mocked_db.object_as_dict.side_effect = lambda x: {"id": x.id}
     session = mocked_db.db_session().__enter__()
-    query = session.query().order_by()
+    query = session.query().filter().order_by()
 
     # Create objects with an id attribute
     objs = []
@@ -168,6 +172,7 @@ def test_get_salaries(mocked_db):
             "a_str": "45.6",
         }
     ]
+
     mocked_db.object_as_dict.side_effect = lambda x: x
     assert list(get_salaries()) == [
         {"job_id": "foo", "a_decimal": 12.3, "a_float": 23.4, "a_str": "45.6"}
@@ -215,3 +220,97 @@ def test_get_requires_degree(mocked_db):
             "a_str": "45.6",
         }
     ]
+
+
+@mock.patch(PATH.format("identify_duplicates"), side_effect=lambda **kwargs: kwargs)
+@mock.patch(PATH.format("db"))
+def test_get_duplicate_ids(mocked_db, mocked_identify):
+    session = mocked_db.db_session().__enter__()
+    session.query().filter().all.return_value = [(1,), (2,)]
+    assert get_duplicate_ids(
+        min_weight="min_weight",
+        max_weight="max_weight",
+        split_by_location="split_by_location",
+        date_filter="date_filter",
+    ) == {
+        "ids": {1, 2},
+        "min_weight": "min_weight",
+        "max_weight": "max_weight",
+        "split_by_location": "split_by_location",
+    }
+
+
+@mock.patch(PATH.format("db"))
+def test_get_duplicate_subgraphs(mocked_db):
+    # Subgraph 1: 1-2-3-4-5
+    edges = [(1, 2), (2, 3), (1, 4), (2, 5)]
+    # Subgraph 2: 6-7-10
+    edges += [(6, 10), (10, 7)]
+    # Subgraph 3: 8-9
+    edges += [(8, 9), (8, 9)]
+    session = mocked_db.db_session().__enter__()
+    session.query().filter().all.return_value = edges
+
+    subgraphs = get_duplicate_subgraphs(min_weight=1, max_weight=1)
+    assert subgraphs == [{1, 2, 3, 4, 5}, {6, 7, 10}, {8, 9}]
+
+
+@mock.patch(PATH.format("get_duplicate_subgraphs"))
+@mock.patch(PATH.format("db"))
+def test_get_subgraphs_by_location(mocked_db, mocked_subgraphs):
+    mocked_subgraphs.return_value = [{1, 2, 3, 4, 5}, {6, 7, 10}, {8, 9}]
+
+    session = mocked_db.db_session().__enter__()
+    session.query().all.return_value = [
+        # return in the form (job_id, location, description_length)
+        # and so locations here are "foo" and "bar"
+        # and description_lengths are in the range 1 - 8, noting that
+        # < 5 will be rejected as "too short"
+        (1, "foo", 6),
+        (2, "foo", 1),  # too short
+        (3, "foo", 8),
+        (4, "foo", 4),  # too short
+        (5, "bar", 6),  # only bar in the group
+        (6, "foo", 6),  # only foo in the group
+        (7, "bar", 6),
+        (10, "bar", 6),
+        (9, "foo", 1),  # too short
+        (8, "foo", 6),  # only foo in the group
+    ]
+
+    subgraphs = get_subgraphs_by_location(min_weight=1, max_weight=1)
+    assert subgraphs == [{1, 3}, {7, 10}]
+
+
+@mock.patch(
+    PATH.format("get_subgraphs_by_location"), return_value=[{1, 2, 3}, {7, 10, 11}]
+)
+@mock.patch(
+    PATH.format("get_duplicate_subgraphs"), return_value=[{1, 2, 3}, {7, 10, 11}]
+)
+def test_identify_duplicates_split(mocked_dupe_subgraphs, mocked_subgraphs_by_loc):
+    dupe_ids = identify_duplicates(
+        ids={7, 11, 3, 10}, min_weight=1, max_weight=1, split_by_location=True
+    )
+    # 7 dropped as an exemplar, 3 is the only id in its group
+    assert dupe_ids == {11, 10}
+    # split_by_location == True
+    assert mocked_dupe_subgraphs.call_count == 0
+    assert mocked_subgraphs_by_loc.call_count == 1
+
+
+@mock.patch(
+    PATH.format("get_subgraphs_by_location"), return_value=[{1, 2, 3}, {7, 10, 11}]
+)
+@mock.patch(
+    PATH.format("get_duplicate_subgraphs"), return_value=[{1, 2, 3}, {7, 10, 11}]
+)
+def test_identify_duplicates_no_split(mocked_dupe_subgraphs, mocked_subgraphs_by_loc):
+    dupe_ids = identify_duplicates(
+        ids={7, 11, 3, 10}, min_weight=1, max_weight=1, split_by_location=False
+    )
+    # 7 dropped as an exemplar, 3 is the only id in its group
+    assert dupe_ids == {11, 10}
+    # split_by_location == False
+    assert mocked_dupe_subgraphs.call_count == 1
+    assert mocked_subgraphs_by_loc.call_count == 0

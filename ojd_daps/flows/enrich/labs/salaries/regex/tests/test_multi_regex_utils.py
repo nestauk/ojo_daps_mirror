@@ -20,27 +20,58 @@ def test_regex_model():
 
 
 def test_annualised_salary():
-    assert annualised_salary(225, "per day") == 58500
-    assert annualised_salary(9.5, "per hour") == 18525
-    assert annualised_salary(66000, "per annum") == 66000
+    assert annualised_salary(225, "per day") == 58500.0
+    assert annualised_salary(9.5, "per hour") == 18525.0
+    assert annualised_salary(66000, "per annum") == 66000.0
 
 
 def test_extract_salary():
-    salaries = [[22000.0, 27000.0], [30.0, 500.0], [24.46, 24.46]]
+    # NB: works in any order (min, max) or (max, min)
+    salaries = [[22000.0, 27000.0], [500.0, 30.0], [24.46, 23.46]]
     extracts = [
         {
             "min_salary": 22000.0,
             "max_salary": 27000.0,
             "rate": "per annum",
-            "min_annualised_salary": 22000.0,
-            "max_annualised_salary": 27000.0,
+            "min_annualised_salary": 22000,
+            "max_annualised_salary": 27000,
         },
         {
             "min_salary": 30.0,
             "max_salary": 500.0,
             "rate": "per day",
-            "min_annualised_salary": 7800.0,
-            "max_annualised_salary": 130000.0,
+            "min_annualised_salary": 7800,
+            "max_annualised_salary": 130000,
+        },
+        {
+            "min_salary": 23.46,
+            "max_salary": 24.46,
+            "rate": "per hour",
+            "min_annualised_salary": 45747.0,
+            "max_annualised_salary": 47697.0,
+        },
+    ]
+    for salary, extract in zip(salaries, extracts):
+        assert extract_salary(salary) == extract
+
+
+def test_extract_salary_min_zero():
+    # NB: works in any order (min, max) or (max, min)
+    salaries = [[0.0, 27000.0], [500.0, 0], [0.0, 24.46]]
+    extracts = [
+        {
+            "min_salary": 27000.0,
+            "max_salary": 27000.0,
+            "rate": "per annum",
+            "min_annualised_salary": 27000,
+            "max_annualised_salary": 27000,
+        },
+        {
+            "min_salary": 500.0,
+            "max_salary": 500.0,
+            "rate": "per day",
+            "min_annualised_salary": 130000,
+            "max_annualised_salary": 130000,
         },
         {
             "min_salary": 24.46,
@@ -52,6 +83,41 @@ def test_extract_salary():
     ]
     for salary, extract in zip(salaries, extracts):
         assert extract_salary(salary) == extract
+
+
+def test_extract_salary_disparity():
+    # NB: works in any order (min, max) or (max, min)
+    salaries = [[150, 27000.0], [500.0, 5], [2, 24.46]]
+    extracts = [
+        {
+            "min_salary": 27000.0,
+            "max_salary": 27000.0,
+            "rate": "per annum",
+            "min_annualised_salary": 27000,
+            "max_annualised_salary": 27000,
+        },
+        {
+            "min_salary": 500.0,
+            "max_salary": 500.0,
+            "rate": "per day",
+            "min_annualised_salary": 130000,
+            "max_annualised_salary": 130000,
+        },
+        {
+            "min_salary": 24.46,
+            "max_salary": 24.46,
+            "rate": "per hour",
+            "min_annualised_salary": 47697.0,
+            "max_annualised_salary": 47697.0,
+        },
+    ]
+    for salary, extract in zip(salaries, extracts):
+        assert extract_salary(salary) == extract
+
+
+def test_extract_salary_max_zero():
+    salaries = [[0.0, 0.0], [0, 0.0], [0.0, 0]]
+    assert all(extract_salary(salary) is None for salary in salaries)
 
 
 @mock.patch(PATH.format("save_to_s3"))

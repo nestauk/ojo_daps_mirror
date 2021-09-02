@@ -22,32 +22,37 @@ from .common import (
     load_from_s3,
 )
 
+PER_ANNUM_TO_RATE = {
+    "per day": 5 * 52,
+    "per hour": 37.5 * 52,
+    "per annum": 1,
+}
+
+MIN_SALARY = 4.30  # Minimum wage for apprenticeships (Sept 2021)
+MIN_SALARY_DISPARITY = 50  # Max salary cannot be more than this time min salary
+
 
 def annualised_salary(salary, rate):
     """Calculates annual salary"""
-    if rate == "per day":
-        return salary * 5 * 52
-    elif rate == "per hour":
-        return salary * 37.5 * 52
-    else:
-        return salary
+    return round(salary * PER_ANNUM_TO_RATE[rate], 2)
 
 
-def extract_salary(salary):
+def extract_salary(salaries):
     """Make salary extraction dictionary"""
-    salary_ext = {}
-    salary_ext["min_salary"] = min(salary)
-    salary_ext["max_salary"] = max(salary)
-    salary_ext["rate"] = guess_rate(
-        salary_ext["min_salary"] + salary_ext["max_salary"] / 2
-    )  # for some the range is very large so use average
-    salary_ext["min_annualised_salary"] = round(
-        annualised_salary(salary_ext["min_salary"], salary_ext["rate"]), 2
-    )
-    salary_ext["max_annualised_salary"] = round(
-        annualised_salary(salary_ext["max_salary"], salary_ext["rate"]), 2
-    )
-    return salary_ext
+    min_salary, max_salary = sorted(salaries)
+    # Edge cases
+    if max_salary < MIN_SALARY:
+        return None  # explicit null value
+    if (min_salary < MIN_SALARY) or (max_salary / min_salary > MIN_SALARY_DISPARITY):
+        min_salary = max_salary
+    rate = guess_rate(max_salary)
+    return {
+        "min_salary": min_salary,
+        "max_salary": max_salary,
+        "min_annualised_salary": annualised_salary(min_salary, rate),
+        "max_annualised_salary": annualised_salary(max_salary, rate),
+        "rate": rate,
+    }
 
 
 def regex_model(regex):
@@ -80,5 +85,5 @@ def apply_model(row):
     if raw_salary is None:
         return None
     model = load_model()  # NB: lru_cached
-    salary = model(raw_salary)
-    return extract_salary(salary)
+    salaries = model(raw_salary)
+    return extract_salary(salaries)

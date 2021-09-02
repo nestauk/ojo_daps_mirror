@@ -10,44 +10,22 @@ import os
 os.system(
     f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
 )
+
 import json
-import re
-
-from metaflow import FlowSpec, step, S3, Parameter, batch, resources
-
+from metaflow import FlowSpec, step, S3, batch
 from daps_utils import talk_to_luigi, db
 from daps_utils.flow import DapsFlowMixin
-from daps_utils.db import db_session, object_as_dict
-
-# >>> Workaround for batch
-try:
-    from ojd_daps.orms.raw_jobs import RawJobAd
-except ModuleNotFoundError:
-    pass
-# <<<
-
-# >>> Workaround for batch
-try:
-    import ojd_daps
-except ModuleNotFoundError:
-    ojd_daps = None
-# <<<
-
-# >>> Workaround for metaflow introspection
-from daps_utils import db
-
-db.CALLER_PKG = ojd_daps
-db_session = db.db_session
-# <<<
 
 
 @talk_to_luigi
 class SalariesFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
-        """
-        Starts the flow.
-        """
+        # >>> Workaround for metaflow introspection
+        import ojd_daps
+
+        self.set_caller_pkg(ojd_daps)
+        # <<<
         self.next(self.get_adverts)
 
     @step
@@ -56,9 +34,10 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
         Gets adverts, breaks up into chunks of 20,000.
         """
         from common import get_chunks
+        from ojd_daps.orms.raw_jobs import RawJobAd
 
         limit = 1000 if self.test else None
-        with db_session(database=self.db_name) as session:
+        with self.db_session(database="production") as session:
             jobad_query = session.query(RawJobAd.id, RawJobAd.job_salary_raw)
             jobad_query = jobad_query.filter(RawJobAd.job_salary_raw is not None)
             self.job_ads = [
@@ -79,7 +58,9 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
         salaries = []
         for job_ad in self.input:
             salary_dict = apply_model(job_ad)
-            salary_dict['id'] = job_ad["id"]
+            if salary_dict is None:  # no valid salary found
+                continue
+            salary_dict["id"] = job_ad["id"]
             salaries.append(salary_dict)
         first_id = salaries[0]["id"]
         last_id = salaries[-1]["id"]

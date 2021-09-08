@@ -20,7 +20,14 @@ class RawJobAd(Base):
     s3_location = fixture("text")
     job_title_raw = fixture("text")
     job_location_raw = fixture("text")
-    job_salary_raw = fixture("text")
+    raw_salary = fixture("salary")
+    raw_min_salary = fixture("salary")
+    raw_max_salary = fixture("salary")
+    raw_salary_band = fixture("text")
+    raw_salary_unit = Column(VARCHAR(6), index=True)  # YEARLY / HOURLY / DAILY
+    raw_salary_currency = Column(VARCHAR(5), index=True)
+    salary_competitive = fixture("boolean")
+    salary_negotiable = fixture("boolean")
     company_raw = fixture("text")
     contract_type_raw = fixture("text")
     closing_date_raw = fixture("text")
@@ -35,6 +42,7 @@ class ReedAdDetail(Base):
     parent_sector = fixture("text")
     knowledge_domain = fixture("text")
     occupation = fixture("text")
+
 
 class JobAdDescriptionVector(Base):
     __tablename__ = "job_ad_description_vectors"

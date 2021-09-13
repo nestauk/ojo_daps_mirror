@@ -150,8 +150,17 @@ cython_debug/
 .vscode/
 
 # ignore data and models folder for skills labs
-ojd_daps/flows/enrich/labs/skills/data/*
+ojd_daps/flows/enrich/labs/skills/data/processed/*
+ojd_daps/flows/enrich/labs/skills/data/interim/*
+ojd_daps/flows/enrich/labs/skills/data/aux/*
+ojd_daps/flows/enrich/labs/skills/data/raw/esco_clusters/*
+ojd_daps/flows/enrich/labs/skills/data/raw/job_ads/*
+ojd_daps/flows/enrich/labs/skills/data/raw/esco/*
+!ojd_daps/flows/enrich/labs/skills/data/raw/esco/ESCO_skills_hierarchy.csv
+!ojd_daps/flows/enrich/labs/skills/data/raw/esco/ESCO_skills_concepts_hierarchy.csv
 ojd_daps/flows/enrich/labs/skills/models/*
+!ojd_daps/flows/enrich/labs/skills/models/surface_form_matcher_v02_1.pickle
+!ojd_daps/flows/enrich/labs/skills/models/surface_forms_table_v02_1.csv
 ojd_daps/flows/enrich/labs/skills/notebooks/outputs/*
 
 # ignore notebooks

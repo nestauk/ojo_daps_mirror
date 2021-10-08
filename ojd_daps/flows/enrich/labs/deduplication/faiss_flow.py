@@ -15,12 +15,12 @@ class FaissFlow(FlowSpec, DapsFlowMixin):
     k = Parameter(
         "k",
         help="Maximum number of duplicates that can be found",
-        default='20'
+        default='2500'
     )
     k_large = Parameter(
         "k_large",
         help="Sample size of neighbour documents",
-        default='1000'
+        default='10000'
     )
     n_clusters = Parameter(
         "n_clusters",

@@ -168,7 +168,7 @@ def download_vectors(orm, id_field,
 
 # functions to save/load model parameters
 
-def save_model(k='20', k_large='1000',
+def save_model(k='2500', k_large='10000',
                 n_clusters='250', score_threshold='0.8', metric='METRIC_L1'):
     """Save the model config to s3.
 

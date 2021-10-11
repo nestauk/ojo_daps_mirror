@@ -7,7 +7,6 @@ Utils for retrieving data from either S3 or the database
 
 import boto3
 from random import uniform
-from functools import lru_cache
 from collections import defaultdict
 from decimal import Decimal
 from itertools import groupby
@@ -15,9 +14,10 @@ from datetime import datetime as dt
 import networkx
 from sqlalchemy import func as sql_func
 import logging
-from tqdm import tqdm
+import os
 
 from daps_utils import db
+from ojd_daps import config
 from ojd_daps.flows.collect.common import get_metaflow_bucket
 from ojd_daps.orms.raw_jobs import RawJobAd, JobAdDescriptionVector
 from ojd_daps.orms.std_features import Location, Salary, SOC, RequiresDegree
@@ -28,8 +28,17 @@ from ojd_daps.orms.link_tables import (
     JobAdDuplicateLink,
 )
 from ojd_daps.dqa.vector_utils import download_vectors
+from ojd_daps.dqa.shared_cache import SharedCache, FakeCache
 
 CENTRAL_BUCKET = "most_recent_jobs"
+DATE_FORMAT = "%d-%m-%Y"
+
+# A mechanism for mocking out the cache
+if os.environ.get("DATA_GETTERS_DISKCACHE") == "0":
+    cache = FakeCache()
+# Otherwise retrieve the actual cache
+else:
+    cache = SharedCache(**config["data_getters_cache"]["dev"])
 
 
 def get_s3_job_ads(job_board, read_body=True, sample_ratio=1):
@@ -62,10 +71,27 @@ def get_s3_job_ads(job_board, read_body=True, sample_ratio=1):
         }
 
 
+def make_date_filter(from_date, to_date):
+    """
+    Creates a SqlAlchemy date filter in the bounds from_date --> to_date,
+    with date strings formatted according to DATE_FORMAT
+    """
+    date_filter = True
+    if from_date:
+        date_filter = RawJobAd.created >= dt.strptime(from_date, DATE_FORMAT)
+    if to_date:
+        date_filter = date_filter & (
+            RawJobAd.created <= dt.strptime(to_date, DATE_FORMAT)
+        )
+    return date_filter
+
+
+@cache.memoize(chunksize=1000)
 def get_db_job_ads(
     limit=None,
     chunksize=1000,
     return_features=False,
+    return_description=True,
     deduplicate=False,
     min_dupe_weight=0.95,
     max_dupe_weight=1,
@@ -93,7 +119,7 @@ def get_db_job_ads(
         split_dupes_by_location (bool): Whether or not to discount pairs of job adverts
                                         (with duplicate descriptions) as duplicates if
                                         they do not share a common location.
-        {to, from}_date (str): Strings formatted as %d-%m-%Y, indicating the date
+        {to, from}_date (str): Strings formatted as DATE_FORMAT, indicating the date
                                bounds of the query.
     Yields:
          A job advert "object" in dict form
@@ -103,25 +129,27 @@ def get_db_job_ads(
     features = get_features() if return_features else None
 
     # Create a date filter
-    date_filter = True
-    if from_date:
-        date_filter = RawJobAd.created >= dt.strptime(from_date, "%d-%m-%Y")
-    if to_date:
-        date_filter = date_filter & (
-            RawJobAd.created <= dt.strptime(to_date, "%d-%m-%Y")
-        )
+    date_filter = make_date_filter(from_date, to_date)
 
     # Retrieve duplicate IDs if required
     dupe_ids = (
-        get_duplicate_ids(
-            min_weight=min_dupe_weight,
-            max_weight=max_dupe_weight,
-            split_by_location=split_dupes_by_location,
-            date_filter=date_filter,
+        set(
+            get_duplicate_ids(
+                min_weight=min_dupe_weight,
+                max_weight=max_dupe_weight,
+                split_by_location=split_dupes_by_location,
+                from_date=from_date,
+                to_date=to_date,
+            )
         )
         if deduplicate
         else set()
     )
+
+    # Don't return description is not explicitly requested
+    fields = RawJobAd.__table__.columns
+    if not return_description:
+        fields = filter(lambda col: col.name != "description", fields)
 
     max_id, total_rows = None, 0  # To keep a track of progress
     with db.db_session("production") as session:
@@ -130,7 +158,7 @@ def get_db_job_ads(
         )  # Better performance for large rows
 
         # Setup a base query
-        base_query = session.query(RawJobAd).filter(date_filter).order_by(RawJobAd.id)
+        base_query = session.query(*fields).filter(date_filter).order_by(RawJobAd.id)
         # Limit / offset until done
         logging.info("Iterating over DB rows...")
         while (
@@ -159,12 +187,14 @@ def get_db_job_ads(
                 break
 
 
-def get_duplicate_ids(min_weight, max_weight, split_by_location, date_filter):
+@cache.memoize(chunksize=10000)
+def get_duplicate_ids(min_weight, max_weight, split_by_location, from_date, to_date):
     """
     Retrieve ids of job ads, marked as duplicate in this date filter.
     In practice this is a shallow wrapper around identify_duplicates, but
     it is useful to have identify_duplicates seperate for debugging purposes.
     """
+    date_filter = make_date_filter(from_date, to_date)
     with db.db_session("production") as session:
         all_ids = set(
             item for item, in session.query(RawJobAd.id).filter(date_filter).all()
@@ -176,10 +206,10 @@ def get_duplicate_ids(min_weight, max_weight, split_by_location, date_filter):
         split_by_location=split_by_location,
     )
     logging.debug("Identified", len(dupe_ids), "dupes from", len(all_ids))
-    return dupe_ids
+    yield from dupe_ids
 
 
-@lru_cache()
+@cache.memoize(chunksize=1000)
 def get_duplicate_subgraphs(min_weight=1, max_weight=1):
     """Generate every group of duplicate job ads, for all time"""
     logging.info("Retrieving duplicate subgraphs")
@@ -188,10 +218,10 @@ def get_duplicate_subgraphs(min_weight=1, max_weight=1):
         query = query.filter(JobAdDuplicateLink.weight.between(min_weight, max_weight))
         edge_list = list(query.all())
     graph = networkx.Graph(edge_list)
-    return list(networkx.connected_components(graph))
+    yield from map(list, networkx.connected_components(graph))
 
 
-@lru_cache()
+@cache.memoize(chunksize=1000)
 def get_subgraphs_by_location(min_weight=1, max_weight=1):
     """
     A typical use-case is that we want to consider job ads as distinct
@@ -224,13 +254,11 @@ def get_subgraphs_by_location(min_weight=1, max_weight=1):
 
     # Convert back into subgraphs, grouping by (idx, location)
     ids_by_group = sorted(ids_by_group, key=lambda item: item[1])  # Sort before groupby
-    _subgraphs = list(
-        set(id for id, _ in ids)  # _ = (idx, loc)
-        for _, ids in groupby(ids_by_group, key=lambda item: item[1])  # _ = (idx, loc)
+    _subgraphs = (
+        list(set(id for id, _ in ids))
+        for _, ids in groupby(ids_by_group, key=lambda item: item[1])
     )
-
-    # By definition, groups with length 1 aren't dupes
-    return [ids for ids in _subgraphs if len(ids) > 1]
+    yield from filter(lambda graph: len(graph) > 1, _subgraphs)
 
 
 def identify_duplicates(ids, min_weight, max_weight, split_by_location):
@@ -246,7 +274,7 @@ def identify_duplicates(ids, min_weight, max_weight, split_by_location):
 
     dupes = set()
     logging.info("Iterating over duplicate subgraphs...")
-    for subgraph in tqdm(subgraphs):
+    for subgraph in map(set, subgraphs):
         # Most subgraphs won't contain any of the IDs,
         # and so doing isdisjoint is a speed-up on that
         # assumption
@@ -258,9 +286,10 @@ def identify_duplicates(ids, min_weight, max_weight, split_by_location):
         _dupes.remove(min(_dupes))
         # Append to the set of duplicates
         dupes = dupes.union(_dupes)
-    return dupes
+    return list(dupes)
 
 
+@cache.memoize(chunksize=10000)
 def get_locations(level, do_lookup=False):
     """
     Retrieve locations which we have assigned to each job advert.
@@ -286,7 +315,7 @@ def get_locations(level, do_lookup=False):
             yield row
 
 
-@lru_cache()
+@cache.memoize()
 def get_location_lookup():
     """
     Retrieve name lookups for every geography code.
@@ -323,6 +352,7 @@ def get_location_lookup():
     return dict(code_lookup)
 
 
+@cache.memoize(chunksize=10000)
 def get_salaries():
     """
     Retrieve the salary we have assigned to each job advert.
@@ -345,6 +375,7 @@ def get_salaries():
             }
 
 
+@cache.memoize(chunksize=10000)
 def get_soc():
     """
     Retrieve SOCS which we have assigned to each job advert.
@@ -357,10 +388,10 @@ def get_soc():
     with db.db_session("production") as session:
         # Setup a base query
         query = session.query(*fields).join(SOC, join_on_id)
-        for row in map(db.object_as_dict, query.all()):
-            yield row
+        yield from map(db.object_as_dict, query.all())
 
 
+@cache.memoize(chunksize=10000)
 def get_requires_degree():
     """
     Retrieve requires_degree flag which we have assigned to each job advert.
@@ -377,6 +408,7 @@ def get_requires_degree():
             yield row
 
 
+@cache.memoize(chunksize=10000)
 def get_skills():
     """
     Retrieve skills group data which we have assigned to each job advert.
@@ -396,7 +428,7 @@ def get_skills():
             }
 
 
-@lru_cache()
+@cache.memoize()
 def get_features(location_level="nuts_2"):
     """
     Retrieve the predicted feature collection for all job adverts.
@@ -412,7 +444,7 @@ def get_features(location_level="nuts_2"):
         ("salary", get_salaries),
         ("location", lambda: get_locations(location_level, do_lookup=True)),
         ("soc", get_soc),
-        ("skills", get_skills),
+        # ("skills", get_skills),
         ("requires_degree", get_requires_degree),
     ]
     # Generate the feature collection for all job adverts

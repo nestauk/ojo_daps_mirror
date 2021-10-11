@@ -1,4 +1,7 @@
 from unittest import mock
+import os
+
+os.environ["DATA_GETTERS_DISKCACHE"] = "0"
 
 from ojd_daps.dqa.data_getters import (
     get_s3_job_ads,
@@ -222,22 +225,24 @@ def test_get_requires_degree(mocked_db):
     ]
 
 
-@mock.patch(PATH.format("identify_duplicates"), side_effect=lambda **kwargs: kwargs)
+@mock.patch(PATH.format("make_date_filter"))
+@mock.patch(PATH.format("identify_duplicates"), side_effect=lambda ids, **kwargs: ids)
 @mock.patch(PATH.format("db"))
-def test_get_duplicate_ids(mocked_db, mocked_identify):
+def test_get_duplicate_ids(mocked_db, mocked_identify, mocked_filter):
     session = mocked_db.db_session().__enter__()
     session.query().filter().all.return_value = [(1,), (2,)]
-    assert get_duplicate_ids(
-        min_weight="min_weight",
-        max_weight="max_weight",
-        split_by_location="split_by_location",
-        date_filter="date_filter",
-    ) == {
-        "ids": {1, 2},
-        "min_weight": "min_weight",
-        "max_weight": "max_weight",
-        "split_by_location": "split_by_location",
-    }
+    assert (
+        set(
+            get_duplicate_ids(
+                min_weight="min_weight",
+                max_weight="max_weight",
+                split_by_location="split_by_location",
+                from_date="from_date",
+                to_date="to_date",
+            )
+        )
+        == {1, 2}
+    )
 
 
 @mock.patch(PATH.format("db"))
@@ -247,11 +252,11 @@ def test_get_duplicate_subgraphs(mocked_db):
     # Subgraph 2: 6-7-10
     edges += [(6, 10), (10, 7)]
     # Subgraph 3: 8-9
-    edges += [(8, 9), (8, 9)]
+    edges += [(8, 9), (8, 9)]  # Note: contains duplicate
     session = mocked_db.db_session().__enter__()
     session.query().filter().all.return_value = edges
 
-    subgraphs = get_duplicate_subgraphs(min_weight=1, max_weight=1)
+    subgraphs = list(map(set, get_duplicate_subgraphs(min_weight=1, max_weight=1)))
     assert subgraphs == [{1, 2, 3, 4, 5}, {6, 7, 10}, {8, 9}]
 
 
@@ -278,7 +283,7 @@ def test_get_subgraphs_by_location(mocked_db, mocked_subgraphs):
         (8, "foo", 6),  # only foo in the group
     ]
 
-    subgraphs = get_subgraphs_by_location(min_weight=1, max_weight=1)
+    subgraphs = list(map(set, get_subgraphs_by_location(min_weight=1, max_weight=1)))
     assert subgraphs == [{1, 3}, {7, 10}]
 
 
@@ -289,8 +294,10 @@ def test_get_subgraphs_by_location(mocked_db, mocked_subgraphs):
     PATH.format("get_duplicate_subgraphs"), return_value=[{1, 2, 3}, {7, 10, 11}]
 )
 def test_identify_duplicates_split(mocked_dupe_subgraphs, mocked_subgraphs_by_loc):
-    dupe_ids = identify_duplicates(
-        ids={7, 11, 3, 10}, min_weight=1, max_weight=1, split_by_location=True
+    dupe_ids = set(
+        identify_duplicates(
+            ids={7, 11, 3, 10}, min_weight=1, max_weight=1, split_by_location=True
+        )
     )
     # 7 dropped as an exemplar, 3 is the only id in its group
     assert dupe_ids == {11, 10}
@@ -306,8 +313,10 @@ def test_identify_duplicates_split(mocked_dupe_subgraphs, mocked_subgraphs_by_lo
     PATH.format("get_duplicate_subgraphs"), return_value=[{1, 2, 3}, {7, 10, 11}]
 )
 def test_identify_duplicates_no_split(mocked_dupe_subgraphs, mocked_subgraphs_by_loc):
-    dupe_ids = identify_duplicates(
-        ids={7, 11, 3, 10}, min_weight=1, max_weight=1, split_by_location=False
+    dupe_ids = set(
+        identify_duplicates(
+            ids={7, 11, 3, 10}, min_weight=1, max_weight=1, split_by_location=False
+        )
     )
     # 7 dropped as an exemplar, 3 is the only id in its group
     assert dupe_ids == {11, 10}

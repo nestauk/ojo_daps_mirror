@@ -28,7 +28,7 @@ SOC_URL = ONS_BASE.format(
     "standardoccupationalclassificationsoc/soc2020/"
     "soc2020volume2codingrulesandconventions"
 )
-SOC_LINK_ELEMENT = {"data-gtm-title": "SOC2020 the coding index (excel)"}
+SOC_LINK_ELEMENT = {"data-gtm-type": "related-download"}
 SHEETNAME_CODING = "SOC2020 coding index V4"
 SHEETNAME_GROUPS = "SOC2020 structure"
 WORLD_CITIES = (

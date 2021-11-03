@@ -17,17 +17,6 @@ function mustBeInstalled {
     fi
 }
 
-function forbidCommitTo {
-    branch="$(git rev-parse --abbrev-ref HEAD)"
-    if [ "$branch" == "$1" ]; then
-	echo "Error: Do not work directly on $1 branch. Checkout a new or different branch first." >&2
-	exit 1
-    fi
-}
-
-
-forbidCommitTo "dev"
-forbidCommitTo "master"
 branchStartsWithNumber
 mustBeInstalled "git-crypt"
 ################################################################
@@ -37,7 +26,7 @@ function incrementVersion {
     CALVER=$(date +"%y.%m.%d")
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     PROJECT_ROOT=${PWD##*/}
-    echo -n $CALVER.$CURRENT_BRANCH > ${PROJECT_ROOT}/VERSION
+    echo $CALVER.$CURRENT_BRANCH > ${PROJECT_ROOT}/VERSION
     git add ${PROJECT_ROOT}/VERSION
 }
 incrementVersion

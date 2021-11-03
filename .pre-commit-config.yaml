@@ -1,0 +1,44 @@
+repos:
+  - repo: https://github.com/prettier/pre-commit
+    rev: 57f39166b5a5a504d6808b87ab98d41ebf095b46
+    hooks:
+      - id: prettier
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: check-added-large-files
+        name: Check for added large files
+        entry: check-added-large-files
+        language: python
+      - id: check-merge-conflict
+        name: Check for files with merge conflict strings
+        entry: check-merge-conflict
+        language: python
+      - id: end-of-file-fixer
+        name: Fix End of Files
+        entry: end-of-file-fixer
+        language: python
+        types: [text]
+        stages: [commit, push, manual]
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+        entry: trailing-whitespace-fixer
+        language: python
+        types: [text]
+        stages: [commit, push, manual]
+      - id: check-toml
+        name: Check Toml
+        entry: check-toml
+        language: python
+        types: [toml]
+      - id: no-commit-to-branch
+        name: Prevent commits to dev / master
+        entry: no-commit-to-branch
+        language: python
+        args: ["-b", dev, "-b", master, "-b", main]
+        pass_filenames: false
+  - repo: https://github.com/psf/black
+    rev: 21.9b0
+    hooks:
+      - id: black
+        language_version: python3

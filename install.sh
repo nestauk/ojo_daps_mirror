@@ -4,7 +4,10 @@
 set -e
 chmod +x .githooks/pre-commit
 bash .githooks/pre-commit
-ln -sf $PWD/.githooks/pre-commit .git/hooks/pre-commit
+pip install -e . -r requirements-dev.txt
+pre-commit install --install-hooks
+echo "os.execvp(\"bash\", [\"bash\", \"${PWD}/.githooks/pre-commit\"])" >> .git/hooks/pre-commit
 git config --local include.path ../.gitconfig
+pre-commit run --all-files
 echo install.sh completed successfully
 ################################################################

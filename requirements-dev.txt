@@ -1,0 +1,12 @@
+flake8
+darglint
+pep8-naming
+flake8-annotations
+flake8-docstrings
+flake8-black
+flake8-import-order
+flake8-bandit
+flake8-bugbear
+black
+pytest
+pre-commit

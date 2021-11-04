@@ -16,9 +16,9 @@ from ojd_daps.flows.enrich.labs.skills.skills_detection_utils import (
     find_best_n,
     create_phrase_matcher,
     save_model_locally,
-#     save_model_in_s3,
+    #     save_model_in_s3,
     save_removed_forms,
-#     load_model,
+    #     load_model,
     detect_skills,
     filter_rows,
     DEF_LANGUAGE_MODEL,
@@ -28,6 +28,7 @@ from ojd_daps.flows.enrich.labs.skills.skills_detection_utils import (
     count_surface_forms,
     frequency_refinement,
 )
+
 # from ojd_daps.flows.enrich.labs.skills.helper_utils import load_from_s3, save_to_s3
 from types import GeneratorType
 from spacy.matcher.phrasematcher import PhraseMatcher
@@ -40,8 +41,9 @@ import pickle, json
 from io import BytesIO
 import spacy
 import nltk
+
 nltk.download("wordnet")
-nltk.download('stopwords')
+nltk.download("stopwords")
 
 LOCAL_PATH = Path(__file__).parent
 
@@ -344,9 +346,9 @@ def test_detect_skills():
                 "cluster_0": [0, 1],
                 "cluster_1": [1, 2],
                 "cluster_2": [0, 4],
-                "label_cluster_0": [0,1],
-                "label_cluster_1": [2,3],
-                "label_cluster_2": [4,5],
+                "label_cluster_0": [0, 1],
+                "label_cluster_1": [2, 3],
+                "label_cluster_2": [4, 5],
             }
         ),
         "matcher": create_phrase_matcher(list_of_surface_forms, nlp),
@@ -405,7 +407,7 @@ def test_frequency_refinement():
         True,
         True,
     ]
-    mock_surface_form_table.surface_form_type = ["chunk"]*5
+    mock_surface_form_table.surface_form_type = ["chunk"] * 5
     assert frequency_refinement(mock_surface_form_table, mock_counts, 25) == [
         False,
         True,
@@ -413,6 +415,7 @@ def test_frequency_refinement():
         True,
         True,
     ]
+
 
 # ### Tests with a dependency on S3
 # def test_save_model_in_s3():

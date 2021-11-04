@@ -10,7 +10,7 @@ do
     cd $TOPDIR
     cp -r venv venv-copy
     # Go to the flow dir and install any local requirements
-    cd $TOPDIR/$FLOWDIR/$DIRNAME    
+    cd $TOPDIR/$FLOWDIR/$DIRNAME
     echo $PWD
     pip install -r requirements.txt
     # Run the tests

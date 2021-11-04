@@ -24,8 +24,10 @@ UNIVERSAL_MONTH = 23846  # 12*(1988-1) + 2
 
 # %%
 def test_find_description():
-    body = (b"<span itemprop='description'>THIS IS THE DESCRIPTION</span>"
-            b"<span itemprop='not description'>THIS IS NOT THE DESCRIPTION</span>")
+    body = (
+        b"<span itemprop='description'>THIS IS THE DESCRIPTION</span>"
+        b"<span itemprop='not description'>THIS IS NOT THE DESCRIPTION</span>"
+    )
     assert find_description(body) == "THIS IS THE DESCRIPTION"
 
 

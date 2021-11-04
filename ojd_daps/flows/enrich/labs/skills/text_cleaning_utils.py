@@ -43,6 +43,7 @@ def get_stopwords():
     """Returns the set of English stopwords from nltk"""
     nltk.download("stopwords")
     from nltk.corpus import stopwords
+
     return set(stopwords.words("english"))
 
 

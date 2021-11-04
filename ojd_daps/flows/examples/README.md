@@ -12,5 +12,5 @@ To run this:
 
 Explanation:
 
-	* package-suffixes=.txt will include the local requirements.txt in the AWS batch bundle
-	* datastore=s3 is stipulated by metaflow when using the @batch decorator, so it can write to somewhere!
+    * package-suffixes=.txt will include the local requirements.txt in the AWS batch bundle
+    * datastore=s3 is stipulated by metaflow when using the @batch decorator, so it can write to somewhere!

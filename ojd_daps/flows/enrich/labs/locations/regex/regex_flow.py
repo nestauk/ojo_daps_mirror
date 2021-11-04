@@ -10,12 +10,16 @@ from metaflow import FlowSpec, Parameter, step
 
 
 class RegexFlow(FlowSpec):
-    outcode_regex = Parameter('ouctode_regex',
-                        help='The postcode area regex parameter for this model',
-                        default='[A-Z]{1,2}[0-9][0-9A-Z]?\s?')
-    boilerplate_text = Parameter('boilerplate_text',
-                        help='The cleaning regex parameter for this model',
-                        default='[^\w\s]')
+    outcode_regex = Parameter(
+        "ouctode_regex",
+        help="The postcode area regex parameter for this model",
+        default="[A-Z]{1,2}[0-9][0-9A-Z]?\s?",
+    )
+    boilerplate_text = Parameter(
+        "boilerplate_text",
+        help="The cleaning regex parameter for this model",
+        default="[^\w\s]",
+    )
 
     @step
     def start(self):
@@ -36,7 +40,9 @@ class RegexFlow(FlowSpec):
         """
         Pickle the model, or save model config
         """
-        save_model(outcode_regex=self.outcode_regex, boilerplate_text=self.boilerplate_text)
+        save_model(
+            outcode_regex=self.outcode_regex, boilerplate_text=self.boilerplate_text
+        )
         self.next(self.end)
 
     @step
@@ -47,5 +53,5 @@ class RegexFlow(FlowSpec):
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     RegexFlow()

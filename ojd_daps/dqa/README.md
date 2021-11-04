@@ -2,13 +2,13 @@
 
 **Before contributing, please read the guidance on the front page of this repository.**
 
-  * [Getting Data](#getting-data)
-	* [Collect: Raw HTML (S3)](#collect-raw-html-s3)
-	* [Extract: Raw Job Ads (DB)](#extract-raw-job-ads-db)
-	* [Enrich: Job Ad Locations (DB)](#enrich-job-ad-locations-db)
-	* [Enrich: Job Ad Salaries (DB)](#enrich-job-ad-salaries-db)
-	* [Enrich: Job Ad Vectors (DB)](#enrich-job-ad-description-vectors-db)
-  * [Contributing a Data Quality Analysis](#contributing-a-data-quality-analysis)
+- [Getting Data](#getting-data)
+  - [Collect: Raw HTML (S3)](#collect-raw-html-s3)
+  - [Extract: Raw Job Ads (DB)](#extract-raw-job-ads-db)
+  - [Enrich: Job Ad Locations (DB)](#enrich-job-ad-locations-db)
+  - [Enrich: Job Ad Salaries (DB)](#enrich-job-ad-salaries-db)
+  - [Enrich: Job Ad Vectors (DB)](#enrich-job-ad-description-vectors-db)
+- [Contributing a Data Quality Analysis](#contributing-a-data-quality-analysis)
 
 The purpose of this submodule is to find issues and quirks in the data quality and also in the data collection process. The output of the DQA should always be a "plotting module" (as defined below, but also see examples in the `plots` directory), which is required to have a standard form. In the future these plots can then be run to create a standard monitoring dashboard for OJD DAPS. Even if the plots aren't objectively interesting, they will form the basis of our understanding of the robustness of Open Jobs!
 
@@ -56,45 +56,45 @@ If you would also like features (locations, salaries, soc, etc) then use `return
 
 ```yaml
 {
- '__version__': '21.06.23.187_extract',
- 'id': '41547513',
- 'data_source': 'Reed',
- 'created': datetime.datetime(2020, 12, 11, 0, 0),
- 'url': None,
- 's3_location': 'reed-41547513_test-False.txt',
- 'job_title_raw': 'Account Manager - Oxford',
- 'job_location_raw': 'Grove, Oxfordshire',
- 'job_salary_raw': '65000.0000-65000.0000',
- 'company_raw': 'Executive Network Group',
- 'contract_type_raw': 'Permanent',
- 'closing_date_raw': None,
- 'description': '[]',
- # Note: features here, nested under the 'features' key
- 'features': {
-    'salary': {
-      '__version__': '21.07.08.196_enrich',
-      'min_salary': 65000.0,
-      'max_salary': 65000.0,
-      'rate': 'per annum',
-      'min_annualised_salary': 65000.0,
-      'max_annualised_salary': 65000.0
-     }, # salaries
-   'location': {
-      'nuts_2_code': 'UKI6',
-      'nuts_2_name': 'Outer London — South'
-     }, # locations
-   'soc': {
-      'soc_code': '3534',
-      'soc_title': 'Manager, account'
-    } # soc
-  } # features
+  "__version__": "21.06.23.187_extract",
+  "id": "41547513",
+  "data_source": "Reed",
+  "created": datetime.datetime(2020,
+  12,
+  11,
+  0,
+  0),
+  "url": None,
+  "s3_location": "reed-41547513_test-False.txt",
+  "job_title_raw": "Account Manager - Oxford",
+  "job_location_raw": "Grove, Oxfordshire",
+  "job_salary_raw": "65000.0000-65000.0000",
+  "company_raw": "Executive Network Group",
+  "contract_type_raw": "Permanent",
+  "closing_date_raw": None,
+  "description": "[]",
+  # Note: features here, nested under the 'features' key
+  "features": {
+      "salary":
+        {
+          "__version__": "21.07.08.196_enrich",
+          "min_salary": 65000.0,
+          "max_salary": 65000.0,
+          "rate": "per annum",
+          "min_annualised_salary": 65000.0,
+          "max_annualised_salary": 65000.0,
+        },
+      ? "location" # salaries
+      : { "nuts_2_code": "UKI6", "nuts_2_name": "Outer London — South" },
+      "soc": { "soc_code": "3534", "soc_title": "Manager, account" },
+    }, # locations # soc # features
 } # job_ad
 ```
 
 Notes:
 
-* if a feature could not be predicted for a given job ad then it will be omitted from the `features` collection.
-* There is an initial one-off cost for collecting all of the features together (via `get_features` nested with `get_db_job_ads`) that will happen for the very first job ad, and thereafter the time will scale ~linearly with the number of job ads - so expect not too much difference between 10 ads and 1000 ads, though it should take a while above 10k ads as you're then limited by the time taken to retrieve the raw ads, rather than the features.
+- if a feature could not be predicted for a given job ad then it will be omitted from the `features` collection.
+- There is an initial one-off cost for collecting all of the features together (via `get_features` nested with `get_db_job_ads`) that will happen for the very first job ad, and thereafter the time will scale ~linearly with the number of job ads - so expect not too much difference between 10 ads and 1000 ads, though it should take a while above 10k ads as you're then limited by the time taken to retrieve the raw ads, rather than the features.
 
 ### [Enrich] Job Ad Locations (DB)
 
@@ -183,24 +183,21 @@ vectors.shape, ids.shape
 
 If you require fewer results, set `max_chunks` and `chunksize` for `max_chunks * chunksize` results.
 
-
 ## Contributing a Data Quality Analysis
 
 ### Steps:
 
-
-1) Create an issue on GitHub, corresponding to the DQA which you about to perform. Create a branch and link a PR to your issue (as per the standard setup instructions on the main `README.md`).
-2) Copy the `template_notebook.py` and give it a useful name (something like `{s3, db}_{<lower_camel_case_description>}.py`).
-3) Do your analysis, trying to refactor utils up your notebook as you go
-4) Make some plots
-5) When you're finished, refactor your plots into `ojd_daps.dqa.plots.<your plot module>` (see the "rules" below)
-6) Make sure any functions (other than `make_plot_data` and `make_plot`) which your plotting module rely on are unit-tested under the `tests` directory
-7) Submit a PR
-
+1. Create an issue on GitHub, corresponding to the DQA which you about to perform. Create a branch and link a PR to your issue (as per the standard setup instructions on the main `README.md`).
+2. Copy the `template_notebook.py` and give it a useful name (something like `{s3, db}_{<lower_camel_case_description>}.py`).
+3. Do your analysis, trying to refactor utils up your notebook as you go
+4. Make some plots
+5. When you're finished, refactor your plots into `ojd_daps.dqa.plots.<your plot module>` (see the "rules" below)
+6. Make sure any functions (other than `make_plot_data` and `make_plot`) which your plotting module rely on are unit-tested under the `tests` directory
+7. Submit a PR
 
 ### Rules for the plotting module:
 
-* The name should be `{s3, db}_{<lower_camel_case_description>}_{weekly, monthly, all}.py`
-* Module contains function `make_plot_data` which outputs a iterable. There must be a `test` mode which runs in less than a few minutes.
-* Module contains function `make_plot` which takes the output of `make_plot_data` and returns an `ax` object
-* All plotting modules should be responsible for creating one plot.
+- The name should be `{s3, db}_{<lower_camel_case_description>}_{weekly, monthly, all}.py`
+- Module contains function `make_plot_data` which outputs a iterable. There must be a `test` mode which runs in less than a few minutes.
+- Module contains function `make_plot` which takes the output of `make_plot_data` and returns an `ax` object
+- All plotting modules should be responsible for creating one plot.

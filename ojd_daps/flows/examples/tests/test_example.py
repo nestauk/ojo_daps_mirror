@@ -7,7 +7,7 @@ from ojd_daps.flows.examples.example import find_last_page
 from ojd_daps.flows.examples.example import generate_page_numbers
 
 
-PATH = 'ojd_daps.flows.examples.example.{}'
+PATH = "ojd_daps.flows.examples.example.{}"
 
 
 def test_halfway():
@@ -22,42 +22,46 @@ def test_halfway():
     assert halfway(253, 21436) == 10845
 
 
-@mock.patch(PATH.format('requests'))
+@mock.patch(PATH.format("requests"))
 def test_request(mocked_requests):
-    request_row_as_json('joel', 23)
-    request_row_as_json('nesta', 214)
-    mocked_requests.assert_has_calls([mock.call.get(f'https://swapi.dev/api/joel/23/'),
-                                      mock.call.get().json(),
-                                      mock.call.get(f'https://swapi.dev/api/nesta/214/'),
-                                      mock.call.get().json()])                                      
+    request_row_as_json("joel", 23)
+    request_row_as_json("nesta", 214)
+    mocked_requests.assert_has_calls(
+        [
+            mock.call.get(f"https://swapi.dev/api/joel/23/"),
+            mock.call.get().json(),
+            mock.call.get(f"https://swapi.dev/api/nesta/214/"),
+            mock.call.get().json(),
+        ]
+    )
 
 
-@mock.patch(PATH.format('requests'))
+@mock.patch(PATH.format("requests"))
 def test_page_exists_200(mocked_requests):
     mocked_requests.head().status_code = 200
     mocked_requests.head().raise_for_status.side_effect = Exception
-    assert page_exists('blah ', 'blah blah') == True
+    assert page_exists("blah ", "blah blah") == True
 
 
-@mock.patch(PATH.format('requests'))
+@mock.patch(PATH.format("requests"))
 def test_page_exists_404(mocked_requests):
     mocked_requests.head().status_code = 404
     mocked_requests.head().raise_for_status.side_effect = Exception
-    page_exists('blah ', 'blah blah') == False
+    page_exists("blah ", "blah blah") == False
 
 
-@mock.patch(PATH.format('requests'))
+@mock.patch(PATH.format("requests"))
 def test_page_exists_anything_else(mocked_requests):
     mocked_requests.head().raise_for_status.side_effect = Exception
     with pytest.raises(Exception):
-        page_exists('blah ', 'blah blah')
+        page_exists("blah ", "blah blah")
 
 
-@mock.patch(PATH.format('page_exists'))
+@mock.patch(PATH.format("page_exists"))
 def test_find_last_page(mocked_page_exists):
     # (0, 100), (50, 100), (50, 75), (63, 75), (69, 75), (69, 72), (71, 72)
     mocked_page_exists.side_effect = [True, False, True, True, False, True]
-    assert find_last_page('blah', 0, 100) == 71
+    assert find_last_page("blah", 0, 100) == 71
 
 
 def test_generate_page_numbers():

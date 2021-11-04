@@ -8,12 +8,21 @@ from ojd_daps.orms.example_orm import People
 @pytest.mark.timeout(10)
 def test_people():
     Base = get_declarative_base(People)
-    data = [{'url': 'https://swapi.dev/api/people/12345/',
-             'name': 'Joel', 'height': 195,
-             'id': '12345', 'mass': 2312, 'gender': 'yellow',
-             'hair_color': 'brown', 'eye_color': 'brown',
-             'birth_year': 1962, 'homeworld': '23',
-             'created': date_parser.parse("Aug 28 1999")}]
+    data = [
+        {
+            "url": "https://swapi.dev/api/people/12345/",
+            "name": "Joel",
+            "height": 195,
+            "id": "12345",
+            "mass": 2312,
+            "gender": "yellow",
+            "hair_color": "brown",
+            "eye_color": "brown",
+            "birth_year": 1962,
+            "homeworld": "23",
+            "created": date_parser.parse("Aug 28 1999"),
+        }
+    ]
     # Insert the data in one transaction
     with db_session() as session:
         engine = session.get_bind()

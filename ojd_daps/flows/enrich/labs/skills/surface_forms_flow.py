@@ -158,8 +158,7 @@ class SurfaceFormsFlow(FlowSpec, DapsFlowMixin):
         self.merge_artifacts(inputs, exclude=["form_type", "forms"])
         # Create a dataframe with deduplicated surface forms
         self.surface_forms = deduplicate_surface_forms(
-            surface_form_dataframe(surface_forms),
-            sort_order=self.form_types
+            surface_form_dataframe(surface_forms), sort_order=self.form_types
         )
         self.next(self.refine_by_length)
 

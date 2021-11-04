@@ -25,6 +25,6 @@ jobs:
       - uses: ncipollo/release-action@v1
         with:
           tag: ${{ env.tag }}
-          token: ${{ secrets.ACCESS_TOKEN }}  # PAT required to trigger next workflow
+          token: ${{ secrets.ACCESS_TOKEN }} # PAT required to trigger next workflow
           omitBody: true
           prerelease: true

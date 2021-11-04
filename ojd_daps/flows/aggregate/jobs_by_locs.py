@@ -5,7 +5,11 @@ jobs_by_locations_flow
 A Flow for aggregating jobs by locations.
 """
 # Required for batch
-import os; os.system(f'pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null')
+import os
+
+os.system(
+    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
+)
 import json
 import re
 
@@ -23,13 +27,13 @@ from daps_utils.db import db_session, object_as_dict
 
 import ojd_daps
 from daps_utils import db
+
 db.CALLER_PKG = ojd_daps
 db_session = db.db_session
 
 
 @talk_to_luigi
 class LocationsFlow(FlowSpec, DapsFlowMixin):
-
     @step
     def start(self):
         """
@@ -55,10 +59,11 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
         """
         Ends the flow, saving json data to S3
         """
-        filename = f'jobs_by_locs_test-{self.test}.json'
+        filename = f"jobs_by_locs_test-{self.test}.json"
         with S3(run=self) as s3:
             data = json.dumps(self.data)
             url = s3.put(filename, data)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     LocationsFlow()

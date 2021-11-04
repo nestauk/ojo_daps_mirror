@@ -13,8 +13,7 @@ install:
   - virtualenv venv/
   - source venv/bin/activate
   - pip install --upgrade setuptools
-  - python setup.py install
-  - pip uninstall -y ojd-daps
+  - pip install -r ojd_daps/requirements.txt
 before_script:
   - export PYTHONPATH=$PWD
   - rm -r ojd_daps/config/*

@@ -36,12 +36,12 @@ from matplotlib import pyplot as plt
 SOMETHING = None
 
 # utils
-def somekind_of_util(arg):    
+def somekind_of_util(arg):
     """
     A little description
     """
     do_something()
-    return 
+    return
 
 
 # -
@@ -50,7 +50,7 @@ def somekind_of_util(arg):
 #
 # *these are **probably not** useful for other dqa*
 
-#@lru_cache()  # remember to use lru_cache when fetching data
+# @lru_cache()  # remember to use lru_cache when fetching data
 def get_data():
     """
     A little description
@@ -58,8 +58,8 @@ def get_data():
     do_something()
     return
 
-# ## Main DQA (no fixed format from this point)
 
+# ## Main DQA (no fixed format from this point)
 
 
 # *make sure to put in notes*

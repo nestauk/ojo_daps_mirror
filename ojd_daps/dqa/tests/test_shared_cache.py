@@ -5,16 +5,13 @@ test_shared_diskcache
 import pytest
 from unittest import mock
 from moto import mock_s3
-from ojd_daps.dqa.shared_cache import (
-    full_name,
-    SharedCache,
-    FakeCache
-)
+from ojd_daps.dqa.shared_cache import full_name, SharedCache, FakeCache
 import time
 
 
 DATE_FORMAT = "%d-%m-%Y"
 SLEEP_TIME = 1.5
+
 
 @pytest.fixture
 def cache(tmp_path):

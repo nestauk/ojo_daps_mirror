@@ -1,240 +1,240 @@
 occupation_plurals:
-    - sales
-    - years
-    - goods
-    - operations
-    - systems
-    - communications
-    - events
-    - loans
-    - grounds
-    - lettings
-    - claims
-    - accounts
-    - relations
-    - complaints
-    - services
-    - works
-    - factors
-    - pensions
-    - facilities
-    - media
-    - payments
-    - windows
-    - reservations
-    - telecoms
-    - stores
-    - collections
-    - campaigns
-    - customs
-    - products
-    - trades
-    - steelworks
-    - activities
-    - contracts
-    - highways
-    - utilities
-    - markets
-    - stocks
-    - bonds
-    - supplies
-    - appeals
-    - affairs
-    - personnel
-    - resources
-    - methods
-    - telecommunications
-    - settlements
-    - railways
-    - removals
-    - docks
-    - logistics
-    - materials
-    - arts
-    - sports
-    - tours
-    - premises
-    - accessories
-    - antiques
-    - genetics
-    - trials
-    - controls
-    - appliances
-    - data
-    - solutions
-    - applications
-    - maths
-    - studies
-    - games
-    - needs
-    - humanities
-    - schools
-    - statistics
-    - orders
-    - regulations
-    - standards
-    - benefits
-    - rights
-    - careers
-    - aids
-    - rates
-    - securities
-    - commodities
-    - derivatives
-    - futures
-    - taxes
-    - disabilities
-    - fittings
-    - wages
-    - revenues
-    - difficulties
-    - admissions
-    - records
-    - parts
-    - windows
-    - meals
-    - ceremonies
-    - cosmetics
-    - chemicals
-    - vehicles
-    - groceries
-    - waterways
-    - woodlands
-    - rides
-    - sous
-    - dynamics
-    - grants
-    - skills
-    - proposals
-    - insights
-    - repairs
+  - sales
+  - years
+  - goods
+  - operations
+  - systems
+  - communications
+  - events
+  - loans
+  - grounds
+  - lettings
+  - claims
+  - accounts
+  - relations
+  - complaints
+  - services
+  - works
+  - factors
+  - pensions
+  - facilities
+  - media
+  - payments
+  - windows
+  - reservations
+  - telecoms
+  - stores
+  - collections
+  - campaigns
+  - customs
+  - products
+  - trades
+  - steelworks
+  - activities
+  - contracts
+  - highways
+  - utilities
+  - markets
+  - stocks
+  - bonds
+  - supplies
+  - appeals
+  - affairs
+  - personnel
+  - resources
+  - methods
+  - telecommunications
+  - settlements
+  - railways
+  - removals
+  - docks
+  - logistics
+  - materials
+  - arts
+  - sports
+  - tours
+  - premises
+  - accessories
+  - antiques
+  - genetics
+  - trials
+  - controls
+  - appliances
+  - data
+  - solutions
+  - applications
+  - maths
+  - studies
+  - games
+  - needs
+  - humanities
+  - schools
+  - statistics
+  - orders
+  - regulations
+  - standards
+  - benefits
+  - rights
+  - careers
+  - aids
+  - rates
+  - securities
+  - commodities
+  - derivatives
+  - futures
+  - taxes
+  - disabilities
+  - fittings
+  - wages
+  - revenues
+  - difficulties
+  - admissions
+  - records
+  - parts
+  - windows
+  - meals
+  - ceremonies
+  - cosmetics
+  - chemicals
+  - vehicles
+  - groceries
+  - waterways
+  - woodlands
+  - rides
+  - sous
+  - dynamics
+  - grants
+  - skills
+  - proposals
+  - insights
+  - repairs
 job_stopwords:
-    - month
-    - months
-    - part time
-    - full time
-    - full
-    - part
-    - contract
-    - ftc
-    - fte
-    - full time equivalent
-    - per annum
-    - per day
-    - per hour
-    - ft
-    - pt
-    - work from home
-    - remote working
-    - remote work
-    - working from home
-    - working remotely
-    - work remotely
-    - experience needed
-    - excellent opportunity
-    - urgently required
-    - wanted
-    - filling quickly
-    - apply now
-    - senior
-    - trainee
-    - immediate start
-    - newly qualified
-    - experience new
-    - start new
-    - openings for
-    - explore far
-    - away places
-    - now hiring
-    - experiences start
-    - your new
-    - flexible working
-    - new year
-    - new start
-    - new job
-    - positions filling
-    - bsc req
-    - any major
-    - and free
-    - fixed term
-    - german speaking
-    - french speaking
-    - days nights
-    - up to
-    - to hours
-    - to talk
-    - home working
-    - night shift
-    - new job
-    - degree required
-    - all majors accepted
-    - no
-    - experience a new culture
-    - start a new adventure
-    - great package
-    - positions
-    - in
-    - full arrival support
-    - free flights
-    - apos s degree required all majors accepted
-    - great package
-    - full arrival support
-    - start a new adventure
-    - limited openings
-    - early
-    - it amp apos s time to make it matter
-    - explore far away places
-    - ba
-    - bsc
-    - req
-    - any major positions filling quickly
-    - full support
-    - create a lifetime of memories
-    - no experience necessary
-    - in
-    - limited
-    - flights
-    - bachelor
-    - new job
-    - for incredible experiences start your new year
-    - now interviewing
-    - new year new start new job
-    - days
-    - nights
-    - k
-    - bonus
-    - amp
-    - currently
-    - seeking
-    - looking
-    - competitive salary
-    - benefits
-    - based
-    - location
-    - temporary basis 
-    - gain experience
-    - opportunity
-    - pay
-    - pay rate
+  - month
+  - months
+  - part time
+  - full time
+  - full
+  - part
+  - contract
+  - ftc
+  - fte
+  - full time equivalent
+  - per annum
+  - per day
+  - per hour
+  - ft
+  - pt
+  - work from home
+  - remote working
+  - remote work
+  - working from home
+  - working remotely
+  - work remotely
+  - experience needed
+  - excellent opportunity
+  - urgently required
+  - wanted
+  - filling quickly
+  - apply now
+  - senior
+  - trainee
+  - immediate start
+  - newly qualified
+  - experience new
+  - start new
+  - openings for
+  - explore far
+  - away places
+  - now hiring
+  - experiences start
+  - your new
+  - flexible working
+  - new year
+  - new start
+  - new job
+  - positions filling
+  - bsc req
+  - any major
+  - and free
+  - fixed term
+  - german speaking
+  - french speaking
+  - days nights
+  - up to
+  - to hours
+  - to talk
+  - home working
+  - night shift
+  - new job
+  - degree required
+  - all majors accepted
+  - no
+  - experience a new culture
+  - start a new adventure
+  - great package
+  - positions
+  - in
+  - full arrival support
+  - free flights
+  - apos s degree required all majors accepted
+  - great package
+  - full arrival support
+  - start a new adventure
+  - limited openings
+  - early
+  - it amp apos s time to make it matter
+  - explore far away places
+  - ba
+  - bsc
+  - req
+  - any major positions filling quickly
+  - full support
+  - create a lifetime of memories
+  - no experience necessary
+  - in
+  - limited
+  - flights
+  - bachelor
+  - new job
+  - for incredible experiences start your new year
+  - now interviewing
+  - new year new start new job
+  - days
+  - nights
+  - k
+  - bonus
+  - amp
+  - currently
+  - seeking
+  - looking
+  - competitive salary
+  - benefits
+  - based
+  - location
+  - temporary basis
+  - gain experience
+  - opportunity
+  - pay
+  - pay rate
 ignore_prefixes:
-    - apprentice
-    - assistant
-    - chief
-    - departmental
-    - deputy
-    - head
-    - principal
-    - senior
-    - trainee
-    - under
+  - apprentice
+  - assistant
+  - chief
+  - departmental
+  - deputy
+  - head
+  - principal
+  - senior
+  - trainee
+  - under
 manufacturing_terms:
-    - manufacturing
-    - making
-    - building
-    - repairing
+  - manufacturing
+  - making
+  - building
+  - repairing
 bad_locations:
-    - Sale
-    - Mobile
-    - Enterprise
-    - Opportunity
-    - Mentor
+  - Sale
+  - Mobile
+  - Enterprise
+  - Opportunity
+  - Mentor

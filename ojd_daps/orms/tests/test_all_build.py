@@ -21,7 +21,7 @@ def _test_orm_builds(orm_name):
 def test_orms_build():
     orm_path = Path(__file__).parent.parent
     for file_path in orm_path.iterdir():
-        if file_path.suffix != '.py':
+        if file_path.suffix != ".py":
             continue
-        print('Testing', file_path)
+        print("Testing", file_path)
         _test_orm_builds(orm_name=file_path.stem)

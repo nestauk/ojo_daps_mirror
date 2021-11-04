@@ -59,7 +59,7 @@ BUCKET = "open-jobs-lake"
 KEYS = [
     "jobs-metadata/IPN_GB_2019.csv",
     "jobs-metadata/manual_places.csv",
-    "jobs-metadata/manual_ni_places.csv"
+    "jobs-metadata/manual_ni_places.csv",
 ]
 
 

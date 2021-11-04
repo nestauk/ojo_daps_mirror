@@ -17,7 +17,11 @@ Explanation:
     * datastore=s3 is stipulated by metaflow when using the @batch decorator, so it can write to somewhere!
 """
 # Required for batch
-import os; os.system(f'pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null')
+import os
+
+os.system(
+    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
+)
 from daps_utils import talk_to_luigi
 import requests_cache
 import numpy as np
@@ -28,20 +32,23 @@ import json
 import requests
 
 ALLOWABLE_CODES = (404, 200)
-requests_cache.install_cache('swapi_cache', backend='sqlite',
-                             allowable_codes=ALLOWABLE_CODES,
-                             allowable_methods=('GET', 'HEAD'))
+requests_cache.install_cache(
+    "swapi_cache",
+    backend="sqlite",
+    allowable_codes=ALLOWABLE_CODES,
+    allowable_methods=("GET", "HEAD"),
+)
 
 
 def halfway(a, b):
     """Return an integer halfway between `a` and `b`. In the case of a "tie",
     `b` is returned, via `ceil`"""
-    return int(np.ceil((a+b)/2))
+    return int(np.ceil((a + b) / 2))
 
 
 def make_swapi_url(swapi_type, number):
     """Construct the SWAPI query URL"""
-    return f'https://swapi.dev/api/{swapi_type}/{number}/'
+    return f"https://swapi.dev/api/{swapi_type}/{number}/"
 
 
 def request_row_as_json(swapi_type, number):
@@ -70,7 +77,7 @@ def find_last_page(swapi_type, lower_lim=0, upper_lim=100):
         upper_lim = attempt
     # The following means that we've found the true upper limit
     # (noting that `halfway(...)` returns *ceil*)
-    if lower_lim == upper_lim-1:
+    if lower_lim == upper_lim - 1:
         return lower_lim
     # If not found, try agains
     return find_last_page(swapi_type, lower_lim, upper_lim)
@@ -86,26 +93,23 @@ def generate_page_numbers(first_page, nominal_last_page, actual_last_page):
         last_page = actual_last_page
     # If this isn't true, we've got problems
     if first_page > last_page:
-        raise ValueError(f'First page ({first_page}) is greater '
-                         f'than last page ({last_page})')
+        raise ValueError(
+            f"First page ({first_page}) is greater " f"than last page ({last_page})"
+        )
     # Generate page numbers for batch iteration
     return range(first_page, last_page)
 
 
 @talk_to_luigi
 class BatchDemoFlow(FlowSpec):
-    production = Parameter('production',
-                           help='Run in production mode?',
-                           default=False)
-    swapi_type = Parameter('swapi_type',
-                           help="One of 'people', 'planets' and 'starships'",
-                           default='people')
-    first_page = Parameter('first_page',
-                           help='First API page to hit',
-                           default=1)
-    last_page = Parameter('last_page',
-                          help='Last API page to hit',
-                          default=None)
+    production = Parameter("production", help="Run in production mode?", default=False)
+    swapi_type = Parameter(
+        "swapi_type",
+        help="One of 'people', 'planets' and 'starships'",
+        default="people",
+    )
+    first_page = Parameter("first_page", help="First API page to hit", default=1)
+    last_page = Parameter("last_page", help="Last API page to hit", default=None)
 
     @property
     def test(self):
@@ -117,13 +121,20 @@ class BatchDemoFlow(FlowSpec):
         so rather than use brute-force, we use our brains. Using a binary
         search tree, we are able to determine the last page of the API
         in log(N) time. We then run 'foreach' via batch over the page range."""
-        actual_last_page = find_last_page(self.swapi_type)  # Find the last page number of the API
-        nominal_last_page = (self.first_page + 2 if self.test # Restrict pages in test mode
-                             else self.last_page)  # and otherwise take the provided last page number
-        self.pages = generate_page_numbers(first_page=self.first_page,
-                                           nominal_last_page=nominal_last_page,
-                                           actual_last_page=actual_last_page)
-        self.next(self.get_data, foreach='pages')
+        actual_last_page = find_last_page(
+            self.swapi_type
+        )  # Find the last page number of the API
+        nominal_last_page = (
+            self.first_page + 2
+            if self.test  # Restrict pages in test mode
+            else self.last_page
+        )  # and otherwise take the provided last page number
+        self.pages = generate_page_numbers(
+            first_page=self.first_page,
+            nominal_last_page=nominal_last_page,
+            actual_last_page=actual_last_page,
+        )
+        self.next(self.get_data, foreach="pages")
 
     @batch()
     @step
@@ -142,11 +153,11 @@ class BatchDemoFlow(FlowSpec):
     @step
     def end(self):
         """Save the data to the data lake"""
-        filename = f'swapi-{self.swapi_type}_test-{self.test}.json'  # NB: output path is defined from Flow parameters
+        filename = f"swapi-{self.swapi_type}_test-{self.test}.json"  # NB: output path is defined from Flow parameters
         with S3(run=self) as s3:
             data = json.dumps(self.data)
             url = s3.put(filename, data)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     BatchDemoFlow()

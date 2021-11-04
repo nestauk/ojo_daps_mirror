@@ -16,12 +16,14 @@ from ojd_daps.flows.enrich.labs.skills.text_cleaning_utils import (
     lemmatise,
 )
 
+
 def test_WordNetLemmatizer():  # NB: WordNetLemmatizer is actually a local patch, not NLTK WNL
     assert WordNetLemmatizer() is WordNetLemmatizer()
 
 
 def test_lemmatise():
     assert lemmatise("policies") == lemmatise("policy")
+
 
 def test_clean_punctuation():
     assert clean_punctuation("• ‣ ◦ ⁃ ∙") == ", , , , ,"

@@ -6,7 +6,7 @@ s3 counts weekly
 Counts of files in the 'most_recent_jobs' S3 bucket, grouped
 by the "job posted" date in the main body of the HTML.
 
-Note that the data is only sampled (see SAMPLE_RATIO) as 
+Note that the data is only sampled (see SAMPLE_RATIO) as
 the data processing rate from S3 is too slow without e.g. Spark
 """
 
@@ -86,4 +86,3 @@ if __name__ == "__main__":
     # %matplotlib inline
     plot_data = make_plot_data(test=True)
     ax = make_plot(plot_data=plot_data, test=True)
-

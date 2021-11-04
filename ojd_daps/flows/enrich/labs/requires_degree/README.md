@@ -1,4 +1,5 @@
 # Requires Degree
+
 This enrichment detects whether a job requires a degree by detecting degree-related
 terms in the description.
 

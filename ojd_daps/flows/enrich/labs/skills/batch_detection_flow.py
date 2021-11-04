@@ -27,15 +27,25 @@ class BatchDetectionFlow(FlowSpec, DapsFlowMixin):
 
     # Paths for inputs/outputs
     default_data_path = Path(__file__).parent.joinpath("data")
-    text_data = Parameter( # Using Parameter here, to be able to access the original file name
-        "text_data",
-        help="Table with text data; requires columns 'id' and 'descriptions'",
-        default=f"{default_data_path}/raw/job_ads/sample_reed_extract.csv",
+    text_data = (
+        Parameter(  # Using Parameter here, to be able to access the original file name
+            "text_data",
+            help="Table with text data; requires columns 'id' and 'descriptions'",
+            default=f"{default_data_path}/raw/job_ads/sample_reed_extract.csv",
+        )
     )
-    text_column = Parameter("text_column", help="Column containg job descriptions", default="description")
-    id_column = Parameter("id_column", help="Column containg job identifier", default="id")
+    text_column = Parameter(
+        "text_column", help="Column containg job descriptions", default="description"
+    )
+    id_column = Parameter(
+        "id_column", help="Column containg job identifier", default="id"
+    )
     model_name = Parameter("model_name", help="Model name", default="")
-    preprocessing = Parameter("preprocessing", help="If True, the flow will preprocess the text before extracting skills", default=True)
+    preprocessing = Parameter(
+        "preprocessing",
+        help="If True, the flow will preprocess the text before extracting skills",
+        default=True,
+    )
 
     @step
     def start(self):
@@ -64,9 +74,11 @@ class BatchDetectionFlow(FlowSpec, DapsFlowMixin):
         else:
             texts = zip(self.text_id, self.texts)
         # Detect skills
-        nlp=setup_spacy_model(self.model['nlp'])
+        nlp = setup_spacy_model(self.model["nlp"])
         self.skills = {
-            text_id: detect_skills(text, self.model, nlp=nlp, return_dict=True, debug=True)
+            text_id: detect_skills(
+                text, self.model, nlp=nlp, return_dict=True, debug=True
+            )
             for text_id, text in texts
         }
         self.next(self.save_outputs)
@@ -76,6 +88,7 @@ class BatchDetectionFlow(FlowSpec, DapsFlowMixin):
         """Save outputs to s3 and locally"""
         import json
         from pathlib import Path
+
         path_to_file = Path(self.text_data)
         filename = f"{str(path_to_file.stem)}_{self.model_name}_skills.json"
         outputs = {

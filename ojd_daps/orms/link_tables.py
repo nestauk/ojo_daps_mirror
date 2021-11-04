@@ -3,14 +3,14 @@ Standard Features ORM.
 
 Features link tables for the follwoing:
 - Deduplication
-- Cleaned job title 
+- Cleaned job title
 - Occupation (SOC & ESCO)
 - Industry (SIC)
 - Geography (TTWA & NUTS3)
-- Salary 
+- Salary
 - Skills / competencies (Nesta’s skills taxonomy v2)
-- Level of experience 
-- Education level and qualifications 
+- Level of experience
+- Education level and qualifications
 """
 
 

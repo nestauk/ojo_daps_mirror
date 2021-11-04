@@ -53,7 +53,7 @@ def find_when_posted(body):
 
 # %%
 @lru_cache()
-def get_job_ads_posted_date(job_board, sample_ratio, n_max=None,get_body=False):
+def get_job_ads_posted_date(job_board, sample_ratio, n_max=None, get_body=False):
     """
     Sample jobs from S3 and extract the date on which they were posted,
     and also the "category" of the HTML page. Note that this procedure is very
@@ -63,7 +63,7 @@ def get_job_ads_posted_date(job_board, sample_ratio, n_max=None,get_body=False):
     job_ads = []
     for job_ad in get_s3_job_ads(job_board, sample_ratio=sample_ratio):
         if get_body:
-            body = job_ad['body']
+            body = job_ad["body"]
         else:
             body = job_ad.pop("body")  # Don't keep a hold of the memory intensive body
         cat = find_category(body)  # Ignore categories which aren't 'j*mobile'
@@ -122,7 +122,7 @@ def timestamp_to_universal_month(ts):
 # %%
 def find_description(body):
     """
-    Extract the 'description' field from the raw HTML. 
+    Extract the 'description' field from the raw HTML.
     Not all adverts contain a description.
     """
     decoded = body.decode()

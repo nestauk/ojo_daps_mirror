@@ -24,7 +24,7 @@ Base = declarative_base()
 
 class SOC(Base):
     __tablename__ = "SOC_codes"
-    soc_id = fixture('big_pk')  # An md5 hash of {code + title}
+    soc_id = fixture("big_pk")  # An md5 hash of {code + title}
     soc_code = Column(VARCHAR(5), index=True)
     soc_title = fixture("text")
 
@@ -55,6 +55,7 @@ class RequiresDegree(Base):
     __tablename__ = "requires_degree"
     id = fixture("pk")
     requires_degree = fixture("boolean")
+
 
 class StdJobTitle(Base):
     __tablename__ = "std_job_titles"

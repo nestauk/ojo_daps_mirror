@@ -25,7 +25,9 @@ if __name__ == "__main__":
     # few jobs require a degree, so let's print one that does
     print("\nExample jobs *with* degree requirement:")
     n_printed = 0
-    for job_ad in model.io.load_jobs(limit=10000, columns=(RawJobAd.id, RawJobAd.description)):
+    for job_ad in model.io.load_jobs(
+        limit=10000, columns=(RawJobAd.id, RawJobAd.description)
+    ):
         if model.apply_model(job_ad):
             print()
             print(job_ad["id"])

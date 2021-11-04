@@ -1,6 +1,7 @@
 ################################################################
 ### Text automatically added by daps-utils metaflowtask-init ###
 from .__initplus__ import load_current_version, __basedir__, load_config
+
 try:
     config = load_config()
 except ModuleNotFoundError as exc:  # For integration with setup.py
@@ -19,7 +20,9 @@ def declarative_base():
         @declared_attr
         def __tablename__(cls):
             return cls.__name__.lower()
-        __version__ = Column(TEXT, nullable=False,
-                             default=__version__,
-                             onupdate=__version__)
+
+        __version__ = Column(
+            TEXT, nullable=False, default=__version__, onupdate=__version__
+        )
+
     return declarative_base(cls=Base)

@@ -20,6 +20,7 @@ import igraph as ig
 from time import time
 import os
 
+
 class ConsensusClustering:
 
     """
@@ -47,10 +48,9 @@ class ConsensusClustering:
     by Poulin & Theberge (see https://arxiv.org/abs/1809.05578).
     """
 
-    def __init__(self, graph,
-                 N=20, N_consensus=10,
-                 verbose = True, seed=None,
-                 edge_bootstrap=False):
+    def __init__(
+        self, graph, N=20, N_consensus=10, verbose=True, seed=None, edge_bootstrap=False
+    ):
 
         """
         Parameters
@@ -114,9 +114,9 @@ class ConsensusClustering:
         integers correspond to cluster labels.
         """
         if self._ensemble is None:
-           # Generate ensemble of self.N partitions
-           self._ensemble = self.create_ensemble(self.N, weights='weight')
-           #self.clustering_AMI, _ = self.ensemble_AMI(self.ensemble, v=self.v)
+            # Generate ensemble of self.N partitions
+            self._ensemble = self.create_ensemble(self.N, weights="weight")
+            # self.clustering_AMI, _ = self.ensemble_AMI(self.ensemble, v=self.v)
         return self._ensemble
 
     @property
@@ -140,10 +140,13 @@ class ConsensusClustering:
         if self._consensus_ensemble is None:
             # Use the co-occurrence matrix values for consensus clustering weights
             A = (self.COOC != 0).astype(int)
-            if self.v: print('Using co-occurrence matrix to do consensus clustering...')
+            if self.v:
+                print("Using co-occurrence matrix to do consensus clustering...")
             # Create a new graph and find communities in this new graph
             g_cooc = build_graph(self.COOC / self.N, kNN=A)
-            clust_cooc = ConsensusClustering(g_cooc, N=self.N_consensus, seed=self.consensus_ensemble_seed)
+            clust_cooc = ConsensusClustering(
+                g_cooc, N=self.N_consensus, seed=self.consensus_ensemble_seed
+            )
             self._consensus_ensemble = clust_cooc.create_ensemble()
         return self._consensus_ensemble
 
@@ -167,7 +170,7 @@ class ConsensusClustering:
         else:
             self._consensus_ensemble = ensemble
 
-    def create_ensemble(self, N=None, weights='weight'):
+    def create_ensemble(self, N=None, weights="weight"):
         """
         Generates ensemble of clustering partitions by repeatedly applying
         a clustering algorithm many times.
@@ -186,9 +189,11 @@ class ConsensusClustering:
             List of clustering results, where each clustering result is a list
             of integers. These integers correspond to cluster labels.
         """
-        if N is None: N = self.N
+        if N is None:
+            N = self.N
         ensemble = []
-        if self.v: print(f'Generating an ensemble with {N} partitions...')
+        if self.v:
+            print(f"Generating an ensemble with {N} partitions...")
         for i in range(N):
             # Choose random seed for the clustering
             if self.ensemble_seeds is not None:
@@ -211,12 +216,17 @@ class ConsensusClustering:
                 graph_ = self.graph
 
             # Community detection
-            p = la.find_partition(graph_, weights=weights,
-                                  partition_type=la.ModularityVertexPartition,
-                                  seed=ensemble_seed)
+            p = la.find_partition(
+                graph_,
+                weights=weights,
+                partition_type=la.ModularityVertexPartition,
+                seed=ensemble_seed,
+            )
             ensemble.append(p.membership)
-            if self.v: print('x', end='')
-        if self.v: print('')
+            if self.v:
+                print("x", end="")
+        if self.v:
+            print("")
         return ensemble
 
     @staticmethod
@@ -234,13 +244,15 @@ class ConsensusClustering:
         """
 
         n = len(ensemble[0])
-        COOC = np.zeros((n,n))
+        COOC = np.zeros((n, n))
         # For each clustering result in the ensemble
         for i, p in enumerate(ensemble):
             membership = p
             # Use pandas to find node pairs with the same cluster labels
-            membership_df = pd.DataFrame(data={"id":list(range(len(membership))), "cluster": membership})
-            cooc = membership_df.merge(right=membership_df, on='cluster')
+            membership_df = pd.DataFrame(
+                data={"id": list(range(len(membership))), "cluster": membership}
+            )
+            cooc = membership_df.merge(right=membership_df, on="cluster")
             cooc = cooc[cooc.id_x < cooc.id_y]
             # For each node pair with the same cluster labels, add 1 to the
             # co-clustering occurrence matrix
@@ -265,18 +277,20 @@ class ConsensusClustering:
 
         # Measure the stability of the consensus ensemble. If the consensus ensemble
         # has not been generated yet, it will be by calling the self.consensus_ensemble
-        self.consensus_AMI, AMI_matrix = self.ensemble_AMI(self.consensus_ensemble, v=self.v)
+        self.consensus_AMI, AMI_matrix = self.ensemble_AMI(
+            self.consensus_ensemble, v=self.v
+        )
 
         # Take "the most agreeable" partition as the final consensus clustering
         # partition (i.e., step 3)
-        mean_ami = np.mean(AMI_matrix,axis=1)
+        mean_ami = np.mean(AMI_matrix, axis=1)
         most_agreeable = np.argsort(mean_ami)[-1]
         self._consensus_partition = self.consensus_ensemble[most_agreeable]
 
         # Describe the final consensus clustering partition
         char = self.describe_partition(self._consensus_partition, self.v)
-        self.n = char['n']
-        self.sizes = char['sizes']
+        self.n = char["n"]
+        self.sizes = char["sizes"]
 
     @staticmethod
     def describe_partition(partition, verbose=True):
@@ -286,14 +300,14 @@ class ConsensusClustering:
         partition = np.array(partition)
         clusters = np.unique(partition)
         n = len(clusters)
-        sizes = [0]*n
+        sizes = [0] * n
         for c in range(n):
-            sizes[c] = np.sum(partition==c)
+            sizes[c] = np.sum(partition == c)
 
-        if verbose: print(f"Clustering with {len(partition)} nodes and {n} clusters.")
+        if verbose:
+            print(f"Clustering with {len(partition)} nodes and {n} clusters.")
 
-        return {"n":n,
-                "sizes":sizes}
+        return {"n": n, "sizes": sizes}
 
     @staticmethod
     def ensemble_AMI(P, v=True):
@@ -320,22 +334,25 @@ class ConsensusClustering:
         """
 
         # If P is not a list of lists but a partition module instead, extract the lists of memberships
-        if type(P[0])==la.VertexPartition.ModularityVertexPartition:
+        if type(P[0]) == la.VertexPartition.ModularityVertexPartition:
             P = [e.membership for e in P]
 
-        ami_matrix = np.zeros((len(P),len(P)))
-        for i in range(0,len(P)):
-            for j in range(i,len(P)):
-                ami_matrix[i][j] = ami_score(P[i],P[j],average_method='arithmetic')
+        ami_matrix = np.zeros((len(P), len(P)))
+        for i in range(0, len(P)):
+            for j in range(i, len(P)):
+                ami_matrix[i][j] = ami_score(P[i], P[j], average_method="arithmetic")
 
         ami_matrix += np.triu(ami_matrix).T
-        np.fill_diagonal(ami_matrix,1)
-        ami_avg = np.mean(ami_matrix[np.triu_indices_from(ami_matrix,k=1)])
+        np.fill_diagonal(ami_matrix, 1)
+        ami_avg = np.mean(ami_matrix[np.triu_indices_from(ami_matrix, k=1)])
 
         if v:
-            print(f"Average pairwise AMI across {len(P)} partitions is {np.round(ami_avg,4)}")
+            print(
+                f"Average pairwise AMI across {len(P)} partitions is {np.round(ami_avg,4)}"
+            )
 
         return ami_avg, ami_matrix
+
 
 def build_kNN_matrix(similarity_matrix, kNN, self_connections=False):
     """
@@ -363,10 +380,11 @@ def build_kNN_matrix(similarity_matrix, kNN, self_connections=False):
         np.fill_diagonal(similarity_matrix, 0)
 
     for i in range(similarity_matrix.shape[0]):
-        closest = np.flip(np.argsort(similarity_matrix[i,:]))[0:kNN]
-        kNN_matrix[i,closest] = 1
-        kNN_matrix[closest,i] = 1
+        closest = np.flip(np.argsort(similarity_matrix[i, :]))[0:kNN]
+        kNN_matrix[i, closest] = 1
+        kNN_matrix[closest, i] = 1
     return kNN_matrix
+
 
 def build_graph(similarity_matrix, kNN=None, self_connections=False):
     """
@@ -392,28 +410,29 @@ def build_graph(similarity_matrix, kNN=None, self_connections=False):
         values of the 'similarity_matrix'.
     """
 
-    if type(kNN)==int:
+    if type(kNN) == int:
         # Builds a symmetric, undirected k-nearest neighbour graph with k=kNN
         kNN_matrix = build_kNN_matrix(similarity_matrix, kNN, self_connections)
-    elif type(kNN)==np.ndarray:
+    elif type(kNN) == np.ndarray:
         # Assumes that an adjacency matrix has been provided
         kNN_matrix = kNN
     elif kNN == None:
         # Uses all connections
         kNN_matrix = np.ones((similarity_matrix.shape))
-        if self_connections==False:
-            np.fill_diagonal(kNN_matrix,0)
+        if self_connections == False:
+            np.fill_diagonal(kNN_matrix, 0)
 
-    print('Building the graph... ', end='')
+    print("Building the graph... ", end="")
     W_triu = np.triu(similarity_matrix)
     A_triu = np.triu(kNN_matrix)
     sources, targets = A_triu.nonzero()
     weights = W_triu[A_triu.nonzero()]
     edgelist = list(zip(sources.tolist(), targets.tolist()))
     g = ig.Graph(edges=edgelist, directed=False)
-    g.es['weight'] = weights
-    print('done!')
+    g.es["weight"] = weights
+    print("done!")
     return g
+
 
 def node_affinity(cooc_matrix, cluster_labels, normalise=True):
     """
@@ -444,15 +463,16 @@ def node_affinity(cooc_matrix, cluster_labels, normalise=True):
 
     # Calculate node affinity score for each node with respect to each cluster
     for i in range(cooc_matrix.shape[0]):
-        for c in range(0,len(clust)):
-            j = cluster_labels==c
+        for c in range(0, len(clust)):
+            j = cluster_labels == c
             M[i][c] = np.mean(cooc_matrix[i][j])
 
         # Normalise rows
         if normalise == True:
-            M[i,:] = M[i,:] / np.sum(M[i,:])
+            M[i, :] = M[i, :] / np.sum(M[i, :])
 
     return M
+
 
 def node_affinity_plot(M, cluster_labels, aspect_ratio=0.002, return_matrix=False):
     """
@@ -473,27 +493,28 @@ def node_affinity_plot(M, cluster_labels, aspect_ratio=0.002, return_matrix=Fals
     membership_sorted = np.sort(cluster_labels)
 
     sort_order = np.argsort(cluster_labels)
-    M_sorted = M[sort_order,:]
+    M_sorted = M[sort_order, :]
 
     for c in np.unique(cluster_labels):
-            j = membership_sorted==c
-            m_values = M_sorted[j,c]
-            M_sorted[j,c] = np.flip(np.sort(m_values))
+        j = membership_sorted == c
+        m_values = M_sorted[j, c]
+        M_sorted[j, c] = np.flip(np.sort(m_values))
 
     fig, ax = plt.subplots()
-    fig.figsize=(12,12)
-    plt.imshow(M_sorted, cmap='Blues')
+    fig.figsize = (12, 12)
+    plt.imshow(M_sorted, cmap="Blues")
     plt.colorbar()
     ax.set_aspect(aspect_ratio)
-    plt.xlabel('cluster')
-    plt.ylabel('node')
-    plt.title('Node affinity to cluster')
+    plt.xlabel("cluster")
+    plt.ylabel("node")
+    plt.title("Node affinity to cluster")
     plt.show()
 
-    if return_matrix==True:
+    if return_matrix == True:
         return M_sorted
 
-def cluster_affinity_matrix(M, cluster_labels, symmetric=True, plot=True, cmap='Blues'):
+
+def cluster_affinity_matrix(M, cluster_labels, symmetric=True, plot=True, cmap="Blues"):
     """
     Calculate each cluster's affinity to other clusters based on their constituent
     nodes' affinities to the different clusters.
@@ -517,22 +538,23 @@ def cluster_affinity_matrix(M, cluster_labels, symmetric=True, plot=True, cmap='
     """
 
     n_clust = len(np.unique(cluster_labels))
-    C = np.zeros((n_clust,n_clust))
+    C = np.zeros((n_clust, n_clust))
     for i in range(n_clust):
         for j in range(n_clust):
-            C[i,j] = np.mean(M[np.where(cluster_labels==i)[0],j])
+            C[i, j] = np.mean(M[np.where(cluster_labels == i)[0], j])
 
-    if symmetric==True:
-        C = 0.5*C + 0.5*C.T
+    if symmetric == True:
+        C = 0.5 * C + 0.5 * C.T
 
-    if plot==True:
-        plt.imshow(C,cmap=cmap)
-        plt.xlabel('cluster')
-        plt.ylabel('cluster')
+    if plot == True:
+        plt.imshow(C, cmap=cmap)
+        plt.xlabel("cluster")
+        plt.ylabel("cluster")
         plt.colorbar()
-        plt.title('Cluster affinity to other clusters')
+        plt.title("Cluster affinity to other clusters")
         plt.show()
     return C
+
 
 def list_cluster_stability(C, cluster_labels=None):
     """
@@ -541,12 +563,21 @@ def list_cluster_stability(C, cluster_labels=None):
     """
     clust_stability = C.diagonal()
     if type(cluster_labels) == type(None):
-        cluster_labels = [''] *len(clust_stability)
+        cluster_labels = [""] * len(clust_stability)
     for j in range(len(clust_stability)):
         print(f"{np.round(clust_stability[j],2)}, (cluster {j}), {cluster_labels[j]}")
 
+
 ####### TO DO TO DO TO DO TO DO TO DO ########
-def plot_confusion_matrix(y_true, y_pred, true_labels=None, pred_labels=None, normalize_to=None, plot=True, return_handle=False):
+def plot_confusion_matrix(
+    y_true,
+    y_pred,
+    true_labels=None,
+    pred_labels=None,
+    normalize_to=None,
+    plot=True,
+    return_handle=False,
+):
     """
     Compares two different partitionings of data, i.e., two seperate clusterings,
     using a matrix where the entry (k,l) indicates the correspondence between
@@ -582,37 +613,39 @@ def plot_confusion_matrix(y_true, y_pred, true_labels=None, pred_labels=None, no
     """
     # y_true = columns, y_pred = rows
     def prepare_labels(labels, y):
-        if type(labels)==type(None):
+        if type(labels) == type(None):
             labels = list(range(len(np.unique(y))))
         else:
-            labels = [k[0:20]+'..' for k in labels]
+            labels = [k[0:20] + ".." for k in labels]
         return labels
 
     true_labels = prepare_labels(true_labels, y_true)
     pred_labels = prepare_labels(pred_labels, y_pred)
 
     c = confusion_matrix(y_true=y_true, y_pred=y_pred)
-    c = c[0:len(np.unique(y_true))]
-    c = c[:,0:len(np.unique(y_pred))]
+    c = c[0 : len(np.unique(y_true))]
+    c = c[:, 0 : len(np.unique(y_pred))]
 
     # Normalise according to the counts of the y_pred categories
     if normalize_to == 1:
-        counts = np.sum(c,axis=normalize_to)
+        counts = np.sum(c, axis=normalize_to)
         c = np.divide(c.T, counts.T).T
     elif normalize_to == 0:
-        counts = np.sum(c,axis=normalize_to)
+        counts = np.sum(c, axis=normalize_to)
         c = np.divide(c, counts)
 
-    if plot==True:
-        cdf = pd.DataFrame(data=np.round(c.T,2), columns=true_labels, index=pred_labels)
-        ax = sns.heatmap(cdf, annot=True, cmap="Blues",square=True)
+    if plot == True:
+        cdf = pd.DataFrame(
+            data=np.round(c.T, 2), columns=true_labels, index=pred_labels
+        )
+        ax = sns.heatmap(cdf, annot=True, cmap="Blues", square=True)
         ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 
         # Fix for matplotlib bug that cuts off top/bottom of seaborn viz
-        b, t = plt.ylim() # Discover the values for bottom and top
-        b += 0.5 # Add 0.5 to the bottom
-        t -= 0.5 # Subtract 0.5 from the top
-        plt.ylim(b, t) # update the ylim(bottom, top) values
+        b, t = plt.ylim()  # Discover the values for bottom and top
+        b += 0.5  # Add 0.5 to the bottom
+        t -= 0.5  # Subtract 0.5 from the top
+        plt.ylim(b, t)  # update the ylim(bottom, top) values
 
     if return_handle == False:
         plt.show()
@@ -620,14 +653,15 @@ def plot_confusion_matrix(y_true, y_pred, true_labels=None, pred_labels=None, no
     else:
         return c.T, ax
 
+
 def plot_sorted_matrix(C, cluster_labels):
     """
     Sorts the rows/columns of a matrix with respect to a set of cluster labels
     """
     sort_order = np.argsort(cluster_labels)
-    C_ = C.copy()[sort_order,:]
-    C_ = C_[:,sort_order]
-    plt.imshow(C_, cmap='inferno_r')
+    C_ = C.copy()[sort_order, :]
+    C_ = C_[:, sort_order]
+    plt.imshow(C_, cmap="inferno_r")
     plt.colorbar()
     plt.show()
 
@@ -636,11 +670,20 @@ def plot_sorted_matrix(C, cluster_labels):
 
 ########## HIERARCHICAL CLUSTERING PIPELINE ##########
 
-def subcluster_nodes(W, l, clusters, nearest_neighbours,
-                     fpath, session_name,
-                     N_nn, N, N_consensus,
-                     random_state=None,
-                     edge_bootstrap=False):
+
+def subcluster_nodes(
+    W,
+    l,
+    clusters,
+    nearest_neighbours,
+    fpath,
+    session_name,
+    N_nn,
+    N,
+    N_consensus,
+    random_state=None,
+    edge_bootstrap=False,
+):
 
     """
     Method that selects a particular partition (clustering), takes this
@@ -711,10 +754,10 @@ def subcluster_nodes(W, l, clusters, nearest_neighbours,
             it can be on the order of GBs for large graphs).
     """
 
-    source_path = fpath+session_name+'_clusters_Level'+str(l)+'.csv'
+    source_path = fpath + session_name + "_clusters_Level" + str(l) + ".csv"
     partition = pd.read_csv(source_path)
 
-    if clusters == 'all':
+    if clusters == "all":
         clusters = list(np.sort(partition.cluster.unique()))
 
     ######## Manage random seeds
@@ -726,8 +769,8 @@ def subcluster_nodes(W, l, clusters, nearest_neighbours,
     ############################
 
     for cc, c in enumerate(clusters):
-        print('==============')
-        print(f'Partitioning cluster {c}...')
+        print("==============")
+        print(f"Partitioning cluster {c}...")
 
         ######## Manage random seeds
         if type(cluster_seeds) != type(None):
@@ -737,11 +780,11 @@ def subcluster_nodes(W, l, clusters, nearest_neighbours,
             nn_seeds = None
         ############################
 
-        vertices = partition[partition.cluster==c].id.to_list()
+        vertices = partition[partition.cluster == c].id.to_list()
 
         W_ = W.copy()
-        W_ = W_[vertices,:]
-        W_ = W_[:,vertices]
+        W_ = W_[vertices, :]
+        W_ = W_[:, vertices]
 
         ensemble_nn = []
 
@@ -758,48 +801,86 @@ def subcluster_nodes(W, l, clusters, nearest_neighbours,
             if type(nn) == int:
                 # Create an undirected graph based on the nodes to be clustered and the kNN value
                 g = build_graph(W_, kNN=nn, self_connections=False)
-                print(f'Clustering graph with {nn} nearest-neighbours...')
-            elif nn == 'all':
-                g = build_graph(W_, kNN=(W_!=0).astype(int), self_connections=False)
-                print(f'Clustering graph...')
-            g.vs['id'] = vertices
+                print(f"Clustering graph with {nn} nearest-neighbours...")
+            elif nn == "all":
+                g = build_graph(W_, kNN=(W_ != 0).astype(int), self_connections=False)
+                print(f"Clustering graph...")
+            g.vs["id"] = vertices
 
             t = time()
-            clust = ConsensusClustering(g, N_nn, N_consensus, seed=nn_seed, edge_bootstrap=edge_bootstrap)
+            clust = ConsensusClustering(
+                g, N_nn, N_consensus, seed=nn_seed, edge_bootstrap=edge_bootstrap
+            )
             ensemble = clust.create_ensemble()
             ensemble_nn += ensemble
             t_elapsed = time() - t
-            print(f'Elapsed time: {round(t_elapsed): .2f} seconds')
+            print(f"Elapsed time: {round(t_elapsed): .2f} seconds")
 
         # Perform the consensus clustering on the combined ensembles
-        print('Clustering the consensus partition...')
+        print("Clustering the consensus partition...")
         t = time()
         clust = ConsensusClustering(g, N, N_consensus, seed=random_state)
         clust.load_ensemble(ensemble_nn)
         clust.consensus_communities()
         t_elapsed = time() - t
-        print(f'Elapsed time: {round(t_elapsed)} seconds')
+        print(f"Elapsed time: {round(t_elapsed)} seconds")
 
         # Dump the results
         ensemble_df = pd.DataFrame()
-        ensemble_df['id'] = g.vs['id']
+        ensemble_df["id"] = g.vs["id"]
         for i in range(N):
             ensemble_df[str(i)] = clust.ensemble[i]
-        ensemble_df.to_csv(fpath + session_name + '_cluster_ensemble_Level'+str(l)+'_Cluster'+str(c)+'.csv', index=False)
+        ensemble_df.to_csv(
+            fpath
+            + session_name
+            + "_cluster_ensemble_Level"
+            + str(l)
+            + "_Cluster"
+            + str(c)
+            + ".csv",
+            index=False,
+        )
 
         consensus_ensemble_df = pd.DataFrame()
-        consensus_ensemble_df['id'] = g.vs['id']
+        consensus_ensemble_df["id"] = g.vs["id"]
         for i in range(N_consensus):
             consensus_ensemble_df[str(i)] = clust.consensus_ensemble[i]
-        consensus_ensemble_df.to_csv(fpath + session_name + '_consensus_ensemble_Level'+str(l)+'_Cluster'+str(c)+'.csv', index=False)
+        consensus_ensemble_df.to_csv(
+            fpath
+            + session_name
+            + "_consensus_ensemble_Level"
+            + str(l)
+            + "_Cluster"
+            + str(c)
+            + ".csv",
+            index=False,
+        )
 
         partition_df = pd.DataFrame()
-        partition_df['id'] = g.vs['id']
-        partition_df['cluster'] = clust.consensus_partition
-        partition_df.to_csv(fpath + session_name + '_subclusters_Level'+str(l)+'_Cluster'+str(c)+'.csv', index=False)
+        partition_df["id"] = g.vs["id"]
+        partition_df["cluster"] = clust.consensus_partition
+        partition_df.to_csv(
+            fpath
+            + session_name
+            + "_subclusters_Level"
+            + str(l)
+            + "_Cluster"
+            + str(c)
+            + ".csv",
+            index=False,
+        )
 
         # Save the co-occurrence matrix
-        np.save(fpath + session_name + '_COOC_Level'+str(l)+'_Cluster'+str(c)+'.npy', clust.COOC)
+        np.save(
+            fpath
+            + session_name
+            + "_COOC_Level"
+            + str(l)
+            + "_Cluster"
+            + str(c)
+            + ".npy",
+            clust.COOC,
+        )
 
 
 def collect_subclusters(l, fpath, session_name, n_total=None):
@@ -833,14 +914,20 @@ def collect_subclusters(l, fpath, session_name, n_total=None):
     # Find all the sub-cluster tables (note that they are following a specific
     # naming convention)
     file_list = os.listdir(fpath)
-    file_list = sorted([f for f in file_list if f.startswith(session_name+'_subclusters_Level'+str(l))])
+    file_list = sorted(
+        [
+            f
+            for f in file_list
+            if f.startswith(session_name + "_subclusters_Level" + str(l))
+        ]
+    )
 
     # Concatenate all subcluster tables and make sure that the cluster labels
     # are correct
     k = 0
     all_data = pd.DataFrame()
     for f in file_list:
-        data = pd.read_csv(fpath+f)
+        data = pd.read_csv(fpath + f)
         n_c = len(data.cluster.unique())
         data.cluster = data.cluster + k
         all_data = pd.concat([all_data, data])
@@ -850,16 +937,16 @@ def collect_subclusters(l, fpath, session_name, n_total=None):
     # (e.g., these will be the central nodes in the case of Level-1 TSC clustering)
     if (len(all_data) != n_total) and (n_total is not None):
         all_data.cluster = all_data.cluster + 1
-        partition = pd.DataFrame(data={'id':list(range(n_total))})
-        partition = partition.merge(all_data, on='id', how='left')
-        partition.loc[partition[partition.cluster.isnull()].index.values, 'cluster'] = 0
+        partition = pd.DataFrame(data={"id": list(range(n_total))})
+        partition = partition.merge(all_data, on="id", how="left")
+        partition.loc[partition[partition.cluster.isnull()].index.values, "cluster"] = 0
     else:
-        partition = pd.DataFrame(data={'id':list(range(n_total))})
-        partition = partition.merge(all_data, on='id', how='left')
+        partition = pd.DataFrame(data={"id": list(range(n_total))})
+        partition = partition.merge(all_data, on="id", how="left")
 
     # Store the final partition as a CSV table
-    partition = partition[['id','cluster']].sort_values('id').reset_index(drop=True)
-    filename = fpath + session_name + '_clusters_Level'+str(l+1)+'.csv'
+    partition = partition[["id", "cluster"]].sort_values("id").reset_index(drop=True)
+    filename = fpath + session_name + "_clusters_Level" + str(l + 1) + ".csv"
     partition.to_csv(filename, index=False)
     print(f"Final partition saved in {filename}")
 

@@ -10,11 +10,11 @@
 #
 # ### Issues raised
 #
-# * 
+# *
 #
 # ### Plotting code refactored to:
 #
-# * 
+# *
 #
 #
 # ## Preamble (imports, globals, utils)
@@ -30,7 +30,7 @@ from data_getters import get_db_job_ads
 # *these are **probably not** useful for other dqa*
 
 # %%
-#@lru_cache()  # remember to use lru_cache when fetching data
+# @lru_cache()  # remember to use lru_cache when fetching data
 # def get_data():
 #     """
 #     A little description
@@ -43,10 +43,10 @@ from data_getters import get_db_job_ads
 
 # %%
 # %%time
-for i, job_ad in enumerate(get_db_job_ads('reed', chunksize=10000)):
+for i, job_ad in enumerate(get_db_job_ads("reed", chunksize=10000)):
     pass
 
-print('Got', i+1, "job ads")
+print("Got", i + 1, "job ads")
 print(job_ad)
 
 # %% [markdown]

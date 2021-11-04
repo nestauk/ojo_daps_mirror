@@ -10,7 +10,7 @@ In addition, the skills have been grouped into categories using a consensus comm
 
 With this code and the pickled model stored in the `models` folder, you can apply the skills detection algorithm on your text data (see the Usage section). However, because we are not able to share the raw input job advert text data, it will not be possible to perform most of the algorithm development steps outlined further below. Nonetheless, we hope that the code might serve as a template for further developments, and if you have access to a job advert text dataset you might be able to adjust the code to run on your data.
 
-For a more detailed explanation of the project and the skills extraction algorithm you can check out [the project website]( https://www.nesta.org.uk/data-visualisation-and-interactive/open-jobs-observatory/) and [blogs](https://www.nesta.org.uk/project-updates/skills-extraction-OJO/).
+For a more detailed explanation of the project and the skills extraction algorithm you can check out [the project website](https://www.nesta.org.uk/data-visualisation-and-interactive/open-jobs-observatory/) and [blogs](https://www.nesta.org.uk/project-updates/skills-extraction-OJO/).
 
 ## Installation
 
@@ -235,6 +235,7 @@ detect_skills(clean_text(text), model, nlp, return_dict=True)
 ```
 
 Notes:
+
 - `entity` is the ESCO skill identifier number corresponding to `id` column in `data/raw/esco/ESCO_skills_hierarchy.csv`
 - `predicted_q` is the "quality" of the surface form predicted by a trained machine learning model (i.e. how representative it is of the skill entity; higher is better). Normally, only the surface forms above a learned threshold are shown (unless you define `debug=True`)
 - `cluster_{x}` provides the cluster integer label. Note that some surface forms have not been assigned to a cluster and hence have `null` values. These will not be displayed in the output unless you set `debug=True`.
@@ -257,7 +258,7 @@ Here is the suggested way of setting up the folder structure for this project wh
   │   │   ├── detected_skills   <- Stores outputs from batch_detection_flow.py and PIPELINE_detect_surface_forms.py
   │   │   ├── embeddings        <- Sentence and word2vec/skill2vec embeddings of skills labels and surface forms
   │   │   ├── surface_forms     <- Outputs related to surface form generation
-  │   │   ├── clusters          <- Outputs related to cluster generation  
+  │   │   ├── clusters          <- Outputs related to cluster generation
   │── models                    <- Models used for skills extraction, and tables with their surface forms
   │── notebooks                 <- Prototyping notebooks with elements of the model building pipeline that
   │                                have not been factored out into metaflow flows
@@ -270,7 +271,8 @@ The algorithm was built by running the following commands, in the order as shown
 
 #### Step 1: Flow to generate surface forms
 
-Flow that generates surface forms from ESCO skills labels and descriptions, and checks their representativeness.  Note that any surface forms that have been discarded in this process are recorded in the file `data/processed/surface_forms/surface_forms_removed_<model_name>.json` for later inspection.
+Flow that generates surface forms from ESCO skills labels and descriptions, and checks their representativeness. Note that any surface forms that have been discarded in this process are recorded in the file `data/processed/surface_forms/surface_forms_removed_<model_name>.json` for later inspection.
+
 ```
 $ python surface_forms_flow.py run --production True --model_name v01_1
 ```
@@ -279,7 +281,8 @@ $ python surface_forms_flow.py run --production True --model_name v01_1
 
 Flow that detects skills in a batch of job advertisement texts and stores the results in a file
 `data/processed/detected_skills/<dataset_name>_<model_name>_skills.json`. The default
-  dataset used in this step was a small test dataset with adverts collected across a few days `data/raw/job_ads/sample_reed_extract.csv`.
+dataset used in this step was a small test dataset with adverts collected across a few days `data/raw/job_ads/sample_reed_extract.csv`.
+
 ```
 $ python batch_detection_flow.py run --production True --model_name v01_1
 ```
@@ -287,6 +290,7 @@ $ python batch_detection_flow.py run --production True --model_name v01_1
 #### Step 3: Remove generic surface forms
 
 Flow that refines the model by removing the most frequently occurring surface forms (based on the small test dataset) while keeping certain, manually selected forms.
+
 ```
 $ python remove_frequent_forms_flow.py run --detected_skills_path data/processed/detected_skills/sample_reed_extract_v01_1_skills.json --new_model_name v01_1
 ```
@@ -294,9 +298,11 @@ $ python remove_frequent_forms_flow.py run --detected_skills_path data/processed
 #### Step 4: Estimating surface form quality
 
 Python script that builds a model to predict surface form quality.
+
 ```
 $ python notebooks/PIPELINE_assess_quality.py
 ```
+
 NB: There is an intermediate step (between Step 3 and 4) to precompute sentence embeddings of skills labels and all surface forms, and place them in `data/processed/embeddings`. For this, I used a [Google Colab notebook](https://colab.research.google.com/drive/1kH-HbhxK4VAL7-h4deCW_cIf90OzAHEQ?usp=sharing) as a very simple solution to calculate 100k+ embeddings using a GPU (you could also use, e.g. an AWS instance). Note that if you change anything in Steps 1-3, you might need to re-calculate the surface form embeddings and place the new ones in the aforementioned folder.
 
 #### Step 5: Defining transversal skills
@@ -312,6 +318,7 @@ $ python notebooks/PIPELINE_general_skills.py
 #### Step 6: Clustering surface forms
 
 Python script to cluster surface forms using consensus community detection, into three hierarchical levels.
+
 ```
 $ python notebooks/PIPELINE_surface_form_clustering.py
 ```
@@ -319,6 +326,7 @@ $ python notebooks/PIPELINE_surface_form_clustering.py
 #### Step 7: Assigning skills to surface form clusters
 
 Using surface form clustering results, to assign skills to clusters.
+
 ```
 $ python notebooks/PIPELINE_cluster_assignments.py
 ```
@@ -327,8 +335,8 @@ $ python notebooks/PIPELINE_cluster_assignments.py
 
 Manual adjustments and further refinements to produce the final skills taxonomy. See `notebooks/AUX_review_clusters.py` for details.
 
-
 ## Skills algorithm version history
+
 - `v01` (April 2021) - First version (now defunct)
 - `v01_1` (June 2021) - Refactored the code, and slightly changed the api of the `detect_skills` function (defunct)
 - `v02` (June 2021) - Outputs cluster integer labels (defunct)

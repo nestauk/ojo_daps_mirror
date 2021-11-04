@@ -2,9 +2,11 @@
 ### Automatically added by daps-utils metaflowtask-init ###
 ###########################################################
 
+
 def path_to_init(_file=__file__, cast_to_str=False):
     """Return the path to this file"""
     from pathlib import Path
+
     path = Path(_file).resolve().parent
     return str(path) if cast_to_str else path
 
@@ -15,18 +17,19 @@ def path_to_this(this):
 
 
 def load(path):
-    """Load a config file from the given path."""    
+    """Load a config file from the given path."""
     import yaml, json, configparser
+
     with open(path) as f:
-        if path.suffix in ('.yml', '.yaml'):
+        if path.suffix in (".yml", ".yaml"):
             return yaml.safe_load(f)
-        if path.suffix == '.json':
+        if path.suffix == ".json":
             return json.load(f)
-        if path.suffix in ('.cnf', '.cfg', '.conf', '.config'):
+        if path.suffix in (".cnf", ".cfg", ".conf", ".config"):
             config = configparser.ConfigParser()
             config.read(path)
             return config
-        if path.suffix in ('.sh',):
+        if path.suffix in (".sh",):
             return path
         raise ValueError(f'Unknown config file type "{path.suffix}"')
 
@@ -38,7 +41,7 @@ def recursive_load(path_to_config):
     for child in path_to_config.iterdir():
         if child.is_dir():
             config[child.name] = recursive_load(child)
-        elif child.suffix == '':
+        elif child.suffix == "":
             config[child.name] = str(child)
         else:
             config[child.stem] = load(child)

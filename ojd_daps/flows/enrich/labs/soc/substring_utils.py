@@ -13,7 +13,7 @@ cleaned raw job titles from the SOC lookup table (downloaded in `metadata_utils`
 - If this fails then find the best partial match from (roughly)
     1) `any(term in query_term for term in search_terms)`, or
     2) `any(query_term in term for term in search_terms)`
-    
+
     In the case of a match in either 1) or 2), the first match is taken,
     with `search_terms` assumed to be ordered by number of terms in order
     to find the most exact match first. If a match is found by both 1) and 2)

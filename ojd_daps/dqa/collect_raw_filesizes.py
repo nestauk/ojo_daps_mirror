@@ -72,27 +72,29 @@ len(job_ads)
 # Generate a list of filesizes
 filesizes = []
 for advert in job_ads[1]:
-    filesizes.append(advert['filesize'])
+    filesizes.append(advert["filesize"])
 #%%
 # Plot a histogram of filesizes
-plt.hist(filesizes, bins = 100)
+plt.hist(filesizes, bins=100)
 
 #%%
 # Plot scatter of filesizes across weeks
 dates = []
 for advert in job_ads[1]:
-    dates.append(timestamp_to_universal_week(advert['posted']))
+    dates.append(timestamp_to_universal_week(advert["posted"]))
 
 data = list(zip(dates, filesizes))
 
 x, y = zip(*data)
-plt.scatter(x,y)
+plt.scatter(x, y)
 
 
 # %%
 # Plot scatter of sum of filesize across weeks
 
-agg = [(key, sum(j for i, j in group)) for key, group in groupby(data, key=lambda x: x[0])]
+agg = [
+    (key, sum(j for i, j in group)) for key, group in groupby(data, key=lambda x: x[0])
+]
 
-x,y = zip(*agg)
-plt.scatter(x,y)
+x, y = zip(*agg)
+plt.scatter(x, y)

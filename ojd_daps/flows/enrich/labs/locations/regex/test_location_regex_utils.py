@@ -12,15 +12,17 @@ from ojd_daps.flows.enrich.labs.locations.regex.regex_utils import (
 
 PATH = "ojd_daps.flows.enrich.labs.locations.regex.regex_utils.{}"
 
+
 def test_regex_model():
-    model = regex_model('[A-Z]{1,2}[0-9][0-9A-Z]?\s?', 'BOILERPLATE')
-    assert model('Telford, TF10') =='TF10'
-    assert model('Telford, TF10 7XY') =='TF10'
-    assert model('London, South East England') =='london'
-    assert model('London BOILERPLATE, South East England') =='london'
-    assert model('London TOWN BOILERPLATE, South East England') =='london_town'
-    assert model('In London TOWN BOILERPLATE, South East England') =='in_london_town'
-    assert model('In London TOWN BOILERPLATE, TF10 7XY') =='TF10'
+    model = regex_model("[A-Z]{1,2}[0-9][0-9A-Z]?\s?", "BOILERPLATE")
+    assert model("Telford, TF10") == "TF10"
+    assert model("Telford, TF10 7XY") == "TF10"
+    assert model("London, South East England") == "london"
+    assert model("London BOILERPLATE, South East England") == "london"
+    assert model("London TOWN BOILERPLATE, South East England") == "london_town"
+    assert model("In London TOWN BOILERPLATE, South East England") == "in_london_town"
+    assert model("In London TOWN BOILERPLATE, TF10 7XY") == "TF10"
+
 
 @mock.patch(PATH.format("boto3"))
 def test_save_to_s3(mocked_boto):

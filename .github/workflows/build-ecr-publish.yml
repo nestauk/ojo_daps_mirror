@@ -1,6 +1,6 @@
 name: Docker Build and Push
 
-on: 
+on:
   workflow_dispatch:
   release:
     types:
@@ -12,53 +12,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: eu-west-2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
 
-    - name: Get the latest tag name
-      id: get_tag_name
-      run: |
+      - name: Get the latest tag name
+        id: get_tag_name
+        run: |
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY
           git fetch
           echo ::set-output name=LATEST_TAG::$(git describe $(git rev-list --tags --max-count=1) --tags)
-    
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ojd-daps
-        IMAGE_TAG: ${{ steps.get_tag_name.outputs.LATEST_TAG }}
-        GIT_USER_NAME:  ${{ secrets.GIT_USER_NAME }}
-        GIT_PASSWORD:  ${{ secrets.GIT_PASSWORD }}
-        GIT_CRYPT_SYM_KEY:  ${{ secrets.GIT_CRYPT_SYM_KEY }} 
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: eu-west-2
-      run: |
-        echo "Received Tag $IMAGE_TAG"
-        # Build a docker container and push it to ECR 
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-                    -f ojd_daps/deploy/Dockerfile \
-                    --build-arg GIT_USER_NAME=$GIT_USER_NAME \
-                    --build-arg GIT_USER_PASSWORD=$GIT_PASSWORD \
-                    --build-arg GIT_CRYPT_SYM_KEY=$GIT_CRYPT_SYM_KEY \
-                    --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-                    --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-                    --build-arg AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
-                    .
-        echo "Pushing image to ECR..."
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ojd-daps
+          IMAGE_TAG: ${{ steps.get_tag_name.outputs.LATEST_TAG }}
+          GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}
+          GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
+          GIT_CRYPT_SYM_KEY: ${{ secrets.GIT_CRYPT_SYM_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-west-2
+        run: |
+          echo "Received Tag $IMAGE_TAG"
+          # Build a docker container and push it to ECR
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+                      -f ojd_daps/deploy/Dockerfile \
+                      --build-arg GIT_USER_NAME=$GIT_USER_NAME \
+                      --build-arg GIT_USER_PASSWORD=$GIT_PASSWORD \
+                      --build-arg GIT_CRYPT_SYM_KEY=$GIT_CRYPT_SYM_KEY \
+                      --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+                      --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+                      --build-arg AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
+                      .
+          echo "Pushing image to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest

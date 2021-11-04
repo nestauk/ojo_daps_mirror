@@ -4,6 +4,7 @@ import boto3
 from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy import inspect
 from daps_utils.db import db_session, object_as_dict
+
 # >>> Workaround for batch
 try:
     from ojd_daps.orms.raw_jobs import RawJobAd
@@ -13,6 +14,7 @@ except ModuleNotFoundError:
 ############
 # Following lines are needed until issue is fixed in daps_utils
 from daps_utils import db
+
 try:
     import ojd_daps
 except ModuleNotFoundError:
@@ -52,4 +54,3 @@ def load_jobs(limit=10, database="production", columns=None):
             session.query(*columns).filter(RawJobAd.description != "[]").limit(limit)
         ):
             yield object_as_dict(ad)
-

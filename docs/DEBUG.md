@@ -27,4 +27,3 @@ Debug step c)
 - [ ] If yes, conclude with remedial steps
 
 - [ ] If not, start over
-

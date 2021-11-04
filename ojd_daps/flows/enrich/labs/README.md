@@ -6,15 +6,15 @@ Make sure that you have followed all of the guidelines in the [core README](http
 
 Notebooks are not versioned in this repo (they are .gitignored), but that doesn't mean you shouldn't use them. You should use [jupytext](https://github.com/mwouts/jupytext) for converting your notebooks into standard python files.
 
-*Please do not force your notebook to be committed*, please stick to using jupytext. Our reason for this "rule" is that jupytext "notebooks" are substantially smaller than standard `jupyter` notebooks and they can be reliably git diff'd (and therefore reviewed).
+_Please do not force your notebook to be committed_, please stick to using jupytext. Our reason for this "rule" is that jupytext "notebooks" are substantially smaller than standard `jupyter` notebooks and they can be reliably git diff'd (and therefore reviewed).
 
-However *please do commit your jupytext "notebook"*: the history of these is a valuable contribution to this repo!
+However _please do commit your jupytext "notebook"_: the history of these is a valuable contribution to this repo!
 
 ## Coding style and Git conventions
 
 You must follow our git conventions - this is non-negotiable.
 
-Please follow the data science coding style guide, which is generally a simplication of the long-standing industry standard ["pep8"](https://www.python.org/dev/peps/pep-0008/) plus uncontroversial patterns that most people converge on with experience. 
+Please follow the data science coding style guide, which is generally a simplication of the long-standing industry standard ["pep8"](https://www.python.org/dev/peps/pep-0008/) plus uncontroversial patterns that most people converge on with experience.
 
 Remember - we're striving to become better coders: make sure to remove repetitions of code, add clear comments and docstrings to make it easier to follow the logic, and write unit tests for your functions. Generally, keep your code efficient and avoid inelegant code by following the style guide. Your PR buddy will also help you with this, see below.
 
@@ -25,24 +25,23 @@ Remember - we're striving to become better coders: make sure to remove repetitio
 
 With every PR you will assign a reviewer who already understands the codebase and the required standards. In general this should be someone who has merged at least a couple of PRs in this repo. For your first couple of PRs in this repo your PR reviewer will be your PR buddy: they are expecting that you might need some assistance along the way with any questions or stumbling blocks. If you don't have a PR buddy then get one! If you need help finding a buddy, then ask in the `dev` channel on Slack- we will be happy to assign you a buddy.
 
-PR buddies (and more broadly to all reviewers): you are the health inspector. You *must*:
+PR buddies (and more broadly to all reviewers): you are the health inspector. You _must_:
 
 - Ensure the git conventions and coding style guide are adhered to.
 - Be an annoying nitpicking know-it-all - that is your core job. If there is a difference in opinion then raise it with the Data Engineering team, we're happy to settle debates.
 - Run the code in **at least** testing-mode. You should be able to reproduce results as presented in the "notebook".
 
-You *musn't* accept a PR:
+You _musn't_ accept a PR:
 
 - Without (re)generating a model.
 - Without verifying that you can load and apply the model, in one step (see `salaries.regex`) in the form `def f(dict): return prediction`
 - If there is any repetition in the code, or there are glaring inefficiencies, or unexplained sections.
 - If functions are too large (see [Single Responsibility Principle](https://en.wikipedia.org/wiki/Single-responsibility_principle))"
 - If functions have not been unit-tested
-- If there is no *testing* mode for running the code
+- If there is no _testing_ mode for running the code
   - i.e. a mode flag for running your code from start-to-finish ("end-to-end") in a faster manner (e.g. by using a smaller subset of data).
 
-If you are new to PR buddying then ask the Data Engineering team! We will be happy to assign you someone to hold your virtual hand for your first PR(s), noting that *you* will be leading the PR.
-
+If you are new to PR buddying then ask the Data Engineering team! We will be happy to assign you someone to hold your virtual hand for your first PR(s), noting that _you_ will be leading the PR.
 
 ## So... what do I need to do?
 
@@ -73,8 +72,7 @@ where `regex_utils.py` contains all the pieces prototyped in `regex.py` for:
 
 Note from `regex_utils.py` that you should load models using the `lru_cache` decorator. If it isn't clear to you why this is then ask!
 
-Models, model parameters or any other metadata should be stored in the `open-job-lake` in the form `s3://open-jobs-lake/labs/<feature name>/<method name>
-`, for example `s3://open-jobs-lake/labs/salaries/regex`.
+Models, model parameters or any other metadata should be stored in the `open-job-lake` in the form `s3://open-jobs-lake/labs/<feature name>/<method name> `, for example `s3://open-jobs-lake/labs/salaries/regex`.
 
 ## Running tests:
 

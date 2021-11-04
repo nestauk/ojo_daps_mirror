@@ -34,11 +34,11 @@ def regex_model(regex, picker_name):
     re_ = re.compile(regex)
     picker = getattr(np, picker_name)
     return lambda raw_salary: picker(
-            np.array(
-                [result for result in re_.findall(raw_salary) if len(result) > 0],
-                dtype=float
-                )
-            )
+        np.array(
+            [result for result in re_.findall(raw_salary) if len(result) > 0],
+            dtype=float,
+        )
+    )
 
 
 def save_model(regex, picker_name):

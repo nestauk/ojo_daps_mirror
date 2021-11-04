@@ -3,15 +3,15 @@ name: Generate Pipfile and Pipfile.lock from the requirements file
 on:
   pull_request:
     paths:
-      - 'ojd_daps/requirements.txt'
+      - "ojd_daps/requirements.txt"
 
 jobs:
   generate_pipfile:
     runs-on: ubuntu-latest
-    # ----------------------------                              
-    # Actions                                                   
+    # ----------------------------
+    # Actions
     steps:
-      # Checkout and install python                               
+      # Checkout and install python
       - name: Checkout the repo
         uses: actions/checkout@v2
       - uses: actions/setup-python@v2

@@ -72,12 +72,16 @@ def test_skills():
 @pytest.mark.timeout(10)
 def test_salary():
     Base = get_declarative_base(Salary)
-    data = [{"id": "567",
-    "min_salary": 27000.00,
-    "max_salary": 28000.00,
-    "rate": "per annum",
-    "min_annualised_salary": 27000.00,
-    "max_annualised_salary": 28000.00,}]
+    data = [
+        {
+            "id": "567",
+            "min_salary": 27000.00,
+            "max_salary": 28000.00,
+            "rate": "per annum",
+            "min_annualised_salary": 27000.00,
+            "max_annualised_salary": 28000.00,
+        }
+    ]
     # Insert the data in one transaction
     with db_session() as session:
         engine = session.get_bind()

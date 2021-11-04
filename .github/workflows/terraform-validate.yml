@@ -17,6 +17,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Get the current DAPS version from VERSION
+        id: daps_version
+        run: |
+          echo ::set-output name=DAPS_VERSION::$(head -1 ojd_daps/VERSION)
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -33,8 +38,10 @@ jobs:
         id: validate_deploy_ojd_daps_job_definition
         env:
           DAPS_TERRAFORM_WORKINGDIR: ojd_daps/deploy/terraform/
+          TF_VAR_DAPS_VERSION: ${{ steps.daps_version.outputs.DAPS_VERSION }}
         run: |
           echo "Validate terraform config."
           cd ${DAPS_TERRAFORM_WORKINGDIR}
           terraform init -input=false
           terraform validate
+          terraform plan

@@ -24,6 +24,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Get the current DAPS version from VERSION
+        id: daps_version
+        run: |
+          echo ::set-output name=DAPS_VERSION::$(head -1 ojd_daps/VERSION)
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -46,6 +51,7 @@ jobs:
           DAPS_TERRAFORM_WORKINGDIR: ojd_daps/deploy/terraform/
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ojd-daps
+          TF_VAR_DAPS_VERSION: ${{ steps.daps_version.outputs.DAPS_VERSION }}
         run: |
           echo "Update AWS Batch with image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest"
           cd ${DAPS_TERRAFORM_WORKINGDIR}

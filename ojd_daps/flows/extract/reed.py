@@ -10,20 +10,79 @@ os.system(
 )
 import json
 import re
+import boto3
 
 import lxml
 import lxml.html
-from bs4 import BeautifulSoup
-from daps_utils import talk_to_luigi
+from bs4 import BeautifulSoup as _BeautifulSoup
+from daps_utils import talk_to_luigi, DapsFlowMixin
 
 from metaflow import S3, FlowSpec, Parameter, batch, step, retry
 
-S3_PATH = "s3://open-jobs-lake/most_recent_jobs/{level}/reed/"
+BUCKET = "open-jobs-lake"
+PREFIX = "most_recent_jobs/production/reed/"
 CHUNKSIZE = 1000
-CAP = 100
+TEST_OFFSET = 800000  # Skip Jan/Feb/March
+
+# Mapping of orm fields to field names in the raw HTML
+KEY_MAP = {
+    "id": "jobId",
+    "created": "jobPostedDate",
+    "job_title_raw": "jobTitle",
+    "job_location_raw": "jobLocation",
+    "company_raw": "jobRecruiterName",
+    "contract_type_raw": "jobType",
+    "type": "jobRecruiterType",
+    "sector": "jobSector",
+    "parent_sector": "jobParentSector",
+    "knowledge_domain": "jobKnowledgeDomain",
+    "occupation": "jobOccupationL3",
+}
+SALARY_KEY_MAP = {
+    "raw_salary": "value",
+    "raw_min_salary": "minValue",
+    "raw_max_salary": "maxValue",
+    "raw_salary_unit": "unitText",
+    "raw_salary_currency": "currency",
+}
 
 
-def get_reed_details(ad):
+def BeautifulSoup(text):
+    """
+    Hardcode html parser to lxml. Breaking with funciton naming conventions
+    (lower_snake --> UpperCamel) to shadow the original class BeautifulSoup.
+    """
+    return _BeautifulSoup(text, "lxml")
+
+
+def get_meta(span, itemprop):
+    """Extract 'baz' from <span itemprop='foo'> <meta itemprop='bar' content='baz'>"""
+    meta = span.find("meta", itemprop=itemprop)
+    if meta is not None:
+        meta = meta.get("content")  # None if doesn't exist
+    return meta  # None if either <meta> or <meta content=""> don't exist
+
+
+def get_salary_info(soup):
+    """Identify salary info from the <span itemprop='baseSalary'> span."""
+    # Determine whether a salary is officially listed
+    span = soup.find("span", itemprop="baseSalary")
+    raw_span = str(span).lower()
+    is_competitive = "competitive" in raw_span
+    is_negotiable = "negotiable" in raw_span
+    has_salary = not (is_competitive or is_negotiable)
+    # Extract salary info
+    salary_info = {
+        orm_field: get_meta(span, itemprop) if has_salary else None
+        for orm_field, itemprop in SALARY_KEY_MAP.items()
+    }
+    # Set boolean flags
+    salary_info["salary_competitive"] = is_competitive
+    salary_info["salary_negotiable"] = is_negotiable
+    return salary_info
+
+
+def get_reed_details(text):
     """Parses details from a reed job advert.
 
     Parameters
@@ -36,53 +95,24 @@ def get_reed_details(ad):
     job_details : dict
         Dictionary of job details
     """
-    soup = BeautifulSoup(ad, "lxml")
-    try:
-        data_text = str(soup)
-        job_details = {
-            "id": reed_detail_parser("jobId", data_text),
-            "data_source": "Reed",
-            "created": reed_detail_parser("jobPostedDate", data_text),
-            "job_title_raw": reed_detail_parser("jobTitle", data_text),
-            "job_location_raw": reed_detail_parser("jobLocation", data_text),
-            "job_salary_raw": regex_search("jobSalaryBand: (.*?),", str(soup)),
-            "company_raw": reed_detail_parser("jobRecruiterName", data_text),
-            "contract_type_raw": reed_detail_parser("jobType", data_text),
-            "description": strip_html(
-                str(soup.find_all("span", itemprop="description"))
-            ),
-            "closing_date_raw": None,  # Reed don't include closing dates
-            "type": reed_detail_parser("jobRecruiterType", data_text),
-            "sector": reed_detail_parser("jobSector", data_text),
-            "parent_sector": reed_detail_parser("jobParentSector", data_text),
-            "knowledge_domain": reed_detail_parser("jobKnowledgeDomain", data_text),
-            "occupation": reed_detail_parser("jobOccupationL3", data_text),
-        }
-        return job_details
-    except IndexError:
-        pass
-
-
-def regex_search(regex, text):
-    """Searches the text and extracts if the regex is found.
-
-    Parameters
-    ----------
-    regex : str
-        Regular expression to be found
-    text : str
-        Text to be searched
-
-    Returns
-    -------
-    value : str
-        Value if search successful, None if not
-    """
-    try:
-        value = re.search(regex, text).group(1).replace("'", "")
-    except:
-        value = None
-    return value
+    # job ads without 'baseSalary' are probably legacy listing pages
+    # rather than job ads per-se, so ignore them
+    if "baseSalary" not in text:
+        return None
+    # Extract fields from the 'dataLayer' section of the job ad
+    job_details = {
+        orm_field: reed_detail_parser(reed_field, text)
+        for orm_field, reed_field in KEY_MAP.items()
+    }
+    # Assign other fields
+    soup = BeautifulSoup(text)
+    description = strip_html(str(soup.find_all("span", itemprop="description")))
+    job_details["description"] = description
+    job_details["data_source"] = "Reed"
+    job_details["closing_date_raw"] = None  # Reed don't include closing dates
+    salary_info = get_salary_info(soup)
+    job_details.update(salary_info)
+    return job_details
 
 
 def reed_detail_parser(field, text):
@@ -124,20 +154,23 @@ def strip_html(text):
     return stripped_html
 
 
+def get_keys(max_keys=1000, limit=None, offset=0):
+    client = boto3.client("s3")
+    kwargs = dict(Bucket=BUCKET, Prefix=PREFIX, MaxKeys=max_keys)
+    response = {"NextContinuationToken": None}
+    keys = []
+    while "NextContinuationToken" in response and (limit is None or len(keys) < limit):
+        response = client.list_objects_v2(**kwargs)
+        kwargs["ContinuationToken"] = response.get("NextContinuationToken")
+        n_keys = response["KeyCount"]
+        if offset <= 0:
+            keys += [obj["Key"] for obj in response["Contents"]]
+        offset -= n_keys
+    return keys
+
+
 @talk_to_luigi
-class ReedAdCurateFlow(FlowSpec):
-    production = Parameter("production", help="Run in production mode?", default=False)
-    job_board = Parameter("job_board", help="Which job board?", default="reed")
-
-    @property
-    def test(self):
-        return not self.production
-
-    @property
-    def s3_path(self):
-        level = "test" if self.test else "production"
-        return S3_PATH.format(level=level)
-
+class ReedAdCurateFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
         """
@@ -151,20 +184,12 @@ class ReedAdCurateFlow(FlowSpec):
         """
         Define the ads to be processed.
         """
-        with S3(s3root=self.s3_path) as s3:
-            self.job_ads = [item.key for item in s3.list_recursive()]
-        self.next(self.generate_ad_chunks)
-
-    @step
-    def generate_ad_chunks(self):
-        """
-        Convert the ads into chunks of 1000.
-        """
         from common import get_chunks
 
-        limit = min(CAP, len(self.job_ads)) if self.test else None
-        self.job_ads = self.job_ads[:limit]
-        self.chunks = get_chunks(self.job_ads, CHUNKSIZE)
+        limit = None if self.production else 10 * CHUNKSIZE
+        offset = 0 if self.production else TEST_OFFSET
+        keys = get_keys(limit=limit, offset=offset)
+        self.chunks = get_chunks(keys, CHUNKSIZE)
         self.next(self.extract_ad_details, foreach="chunks")
 
     @batch
@@ -176,24 +201,25 @@ class ReedAdCurateFlow(FlowSpec):
         """
         ad_details = []
         last_id, first_id = None, None
-        for ad in self.input:
-            with S3(s3root=self.s3_path) as s3:
-                job_ad = s3.get(ad).text
-            try:
+        for key in self.input:
+            with S3(s3root=f"s3://{BUCKET}") as s3:
+                job_ad = s3.get(key=key).text
                 reed_details = get_reed_details(job_ad)
-            except TypeError:
-                pass
-            reed_details["s3_location"] = ad
+                if reed_details is None:
+                    continue
+            reed_details["s3_location"] = key
             ad_details.append(reed_details)
             if first_id is None:
                 first_id = reed_details["id"]
             last_id = reed_details["id"]
+
         # Save to S3
         ids = f"{first_id}-{last_id}"
-        filename = f"extract-{self.job_board}_test-{self.test}_{ids}.json"
+        filename = f"extract-reed_test-{self.test}_{ids}.json"
         with S3(run=self) as s3:
-            data = json.dumps(ad_details)
-            url = s3.put(filename, data)
+            if len(ad_details) > 0:
+                data = json.dumps(ad_details)
+                s3.put(filename, data)
         self.next(self.join_data)
 
     @step

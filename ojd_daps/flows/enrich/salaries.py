@@ -13,8 +13,11 @@ os.system(
 
 import json
 from metaflow import FlowSpec, step, S3, batch
-from daps_utils import talk_to_luigi, db
-from daps_utils.flow import DapsFlowMixin
+from daps_utils import talk_to_luigi, DapsFlowMixin
+from daps_utils.db import object_as_dict
+from labs.salaries.common import extract_salary
+
+CHUNKSIZE = 20000
 
 
 @talk_to_luigi
@@ -36,15 +39,19 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
         from common import get_chunks
         from ojd_daps.orms.raw_jobs import RawJobAd
 
-        limit = 1000 if self.test else None
-        with self.db_session(database="production") as session:
-            jobad_query = session.query(RawJobAd.id, RawJobAd.job_salary_raw)
-            jobad_query = jobad_query.filter(RawJobAd.job_salary_raw is not None)
-            self.job_ads = [
-                {"id": _id, "job_salary_raw": salary}
-                for _id, salary in jobad_query.limit(limit)
-            ]
-        self.chunks = get_chunks(self.job_ads, 20000)
+        limit = 2 * CHUNKSIZE if self.test else None
+        with self.db_session(database="dev") as session:
+            jobad_query = session.query(
+                RawJobAd.id,
+                RawJobAd.raw_salary_unit,
+                RawJobAd.raw_salary_currency,
+                RawJobAd.raw_salary,
+                RawJobAd.raw_min_salary,
+                RawJobAd.raw_max_salary,
+            )
+            jobad_query = jobad_query.filter(RawJobAd.raw_salary_unit is not None)
+            job_ads = list(map(object_as_dict, jobad_query.limit(limit)))
+        self.chunks = get_chunks(job_ads, CHUNKSIZE)
         self.next(self.extract_salaries, foreach="chunks")
 
     @batch(cpu=4)  # cpu=4 to limit the number of containers per batch (diskspace issue)
@@ -53,11 +60,9 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
         """
         Matches locations
         """
-        from labs.salaries.regex.multi_regex_utils import apply_model
-
         salaries = []
         for job_ad in self.input:
-            salary_dict = apply_model(job_ad)
+            salary_dict = extract_salary(job_ad)
             if salary_dict is None:  # no valid salary found
                 continue
             salary_dict["id"] = job_ad["id"]

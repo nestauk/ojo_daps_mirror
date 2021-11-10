@@ -1,6 +1,6 @@
 """
 vectorise_descriptions_flow
-----------------------------
+---------------------------
 
 A Flow for vectorising descriptions from job adverts.
 """
@@ -17,7 +17,7 @@ import json
 import re
 from sqlalchemy.sql.expression import func
 
-from metaflow import FlowSpec, step, S3, Parameter, batch, resources
+from metaflow import FlowSpec, step, S3, Parameter, batch, resources, retry
 from daps_utils import talk_to_luigi, db, DapsFlowMixin
 from daps_utils.db import db_session, object_as_dict
 from sentence_transformers import SentenceTransformer
@@ -116,6 +116,7 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
                     break
         self.next(self.vectorise_descriptions, foreach="chunks")
 
+    @retry
     @batch(cpu=8, memory=32000)
     @step
     def vectorise_descriptions(self):

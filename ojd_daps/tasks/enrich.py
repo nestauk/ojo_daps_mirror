@@ -32,13 +32,13 @@ orm_dict = {
     "locations": JobAdLocationLink,
     "salaries": Salary,
     "skills": JobAdSkillLink,
-    "soc": JobAdSOCLink,
+    # "soc": JobAdSOCLink, # Broken, see https://github.com/nestauk/ojd_daps/issues/320
     "requires_degree": RequiresDegree,
     "deduplication": JobAdDuplicateLink,
     # "Pre-Enrichment" Tasks
     "vectorise_descriptions": JobAdDescriptionVector,
     "location_lookup": Location,
-    "soc_lookup": SOC,
+    # "soc_lookup": SOC, # Broken, see https://github.com/nestauk/ojd_daps/issues/320
 }  # for matching each task to an output ORM
 
 

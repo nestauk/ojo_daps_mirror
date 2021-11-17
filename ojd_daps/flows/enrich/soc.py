@@ -17,6 +17,7 @@ from metaflow import S3, FlowSpec, step, batch
 from labs.soc.substring_utils import apply_model
 from labs.soc.common import load_json_from_s3
 
+from ojd_daps.flows.common import get_chunks
 from daps_utils import DapsFlowMixin, talk_to_luigi
 from daps_utils.db import object_as_dict, db_session
 
@@ -59,8 +60,6 @@ class SocMatchFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
         """Gets job titles, breaks up into chunks of CHUNKSIZE"""
-        from common import get_chunks
-
         # Read all job titles
         limit = 2 * CHUNKSIZE if self.test else None  # 2 chunks for testing
         with db_session(database="production") as session:

@@ -232,7 +232,7 @@ class DeduplicationFlow(FlowSpec, DapsFlowMixin):
                 self.window_queries.append((raw_queries, count))
         self.next(self.find_similar_vectors, foreach="window_queries")
 
-    @batch(cpu=8, memory=16000)
+    @batch(cpu=8, memory=64000)
     @step
     def find_similar_vectors(self):
         """
@@ -254,13 +254,16 @@ class DeduplicationFlow(FlowSpec, DapsFlowMixin):
             for _id1, sims in similar_vectors.items()
             for _id2, weight in sims.items()
         ]
-        # Save the output chunk
-        first_id = data[0]["first_id"]
-        last_id = data[-1]["first_id"]
-        filename = f"deduplication_{first_id}-{last_id}_test-{self.test}.json"
-        with S3(run=self) as s3:
-            data = json.dumps(data)
-            s3.put(filename, data)
+        # Save the output chunk in subchunks, which saves both IO and memory on curate.
+        # Use idx rather than common.get_chunks to save on memory
+        for idx in range(0, len(data), CHUNKSIZE):
+            chunk = data[idx : idx + CHUNKSIZE]
+            first_id = chunk[0]["first_id"]
+            last_id = chunk[-1]["first_id"]
+            filename = f"deduplication_{first_id}-{last_id}_test-{self.test}.json"
+            with S3(run=self) as s3:
+                chunk = json.dumps(chunk)
+                s3.put(filename, chunk)
         self.next(self.dummy_join_step)
 
     @step

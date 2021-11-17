@@ -18,11 +18,11 @@ from ojd_daps import config
 from ojd_daps.orms.link_tables import (
     JobAdLocationLink,
     JobAdSkillLink,
-    JobAdSOCLink,
+    # JobAdSOCLink,
     JobAdDuplicateLink,
 )
 from ojd_daps.orms.raw_jobs import JobAdDescriptionVector
-from ojd_daps.orms.std_features import Location, Salary, SOC, RequiresDegree
+from ojd_daps.orms.std_features import Location, Salary  # SOC, RequiresDegree
 from sqlalchemy_utils.functions import get_declarative_base
 
 CONFIG = config["enrich"]
@@ -33,7 +33,7 @@ orm_dict = {
     "salaries": Salary,
     "skills": JobAdSkillLink,
     # "soc": JobAdSOCLink, # Broken, see https://github.com/nestauk/ojd_daps/issues/320
-    "requires_degree": RequiresDegree,
+    # "requires_degree": RequiresDegree, # Not maintained, and DQA required
     "deduplication": JobAdDuplicateLink,
     # "Pre-Enrichment" Tasks
     "vectorise_descriptions": JobAdDescriptionVector,

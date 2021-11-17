@@ -1,9 +1,9 @@
 """Main API for requires_degree regex model."""
 from functools import lru_cache
-from . import io
+from ojd_daps.flows.common import save_to_s3, load_from_s3
 from . import nlp
 
-
+S3_PATH = "labs/requires_degree/regex"
 DEGREES = [
     "ba",
     "bsc",
@@ -20,13 +20,13 @@ EXPRESSION = r"(?=(\b" + "\\b|\\b".join(DEGREES) + r"\b))"
 @lru_cache()  # <--- Important
 def load_model():
     """Loads the model from S3. LRU cache to reduce overhead on repeat calls."""
-    regex = io.load_from_s3("regex.txt")
+    regex = load_from_s3(S3_PATH, "regex.txt")
     return nlp.regex_model(regex)
 
 
 def save_model(regex=EXPRESSION):
     """Save the regex to S3."""
-    io.save_to_s3("regex.txt", regex)
+    save_to_s3(S3_PATH, "regex.txt", regex)
 
 
 def apply_model(row):

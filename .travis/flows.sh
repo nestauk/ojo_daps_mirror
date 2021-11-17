@@ -12,7 +12,7 @@ do
     # Go to the flow dir and install any local requirements
     cd $TOPDIR/$FLOWDIR/$DIRNAME
     echo $PWD
-    pip install -r requirements.txt
+    ls requirements.txt &> /dev/null && pip install -r requirements.txt || echo "no requirements.txt to install"
     # Run the tests
     PYTHONPATH=$BASE_PYTHONPATH:$PWD pytest -x .
     # Revert back the base venv

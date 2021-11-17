@@ -17,6 +17,7 @@ import lxml.html
 from bs4 import BeautifulSoup as _BeautifulSoup
 from daps_utils import talk_to_luigi, DapsFlowMixin
 
+from ojd_daps.flows.common import get_chunks
 from metaflow import S3, FlowSpec, Parameter, batch, step, retry
 
 BUCKET = "open-jobs-lake"
@@ -184,8 +185,6 @@ class ReedAdCurateFlow(FlowSpec, DapsFlowMixin):
         """
         Define the ads to be processed.
         """
-        from common import get_chunks
-
         limit = None if self.production else 10 * CHUNKSIZE
         offset = 0 if self.production else TEST_OFFSET
         keys = get_keys(limit=limit, offset=offset)

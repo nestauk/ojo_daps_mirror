@@ -1,14 +1,5 @@
-import itertools
+from ojd_daps.flows.common import get_chunks
 from sqlalchemy.sql.expression import func
-
-
-def flatten(iterable):
-    return list(itertools.chain(*iterable))
-
-
-def get_chunks(_list, chunksize):
-    chunks = [_list[x : x + chunksize] for x in range(0, len(_list), chunksize)]
-    return chunks
 
 
 def generate_description_queries(flow, chunksize, min_text_len=5):

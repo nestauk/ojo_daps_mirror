@@ -7,43 +7,28 @@ Text preprocessing and file IO
 
 import json
 import yaml
-import boto3
 from functools import lru_cache
 from pathlib import Path
 import re
 from itertools import filterfalse
+from ojd_daps.flows.common import save_to_s3, load_from_s3
 
-S3_PATH = "jobs-metadata/{}"
+S3_PATH = "jobs-metadata"
 BUCKET_NAME = "open-jobs-lake"
 SELECTED_PUNCT = set(r'!"$%&\()*,/:;<=>?@[\\]^_`{|}~-#.')  # only keep "#'+.-"
 RE_SPACES = re.compile(" +")
 RE_TERMS = re.compile(r"(\w+)")
 
 
-@lru_cache()
-def load_from_s3(filename):
-    """Loads the file contents from the filename at {BUCKET_NAME}/{S3_PATH}"""
-    s3 = boto3.client("s3")
-    obj = s3.get_object(Bucket=BUCKET_NAME, Key=S3_PATH.format(filename))
-    return obj["Body"].read().decode()
-
-
-def save_to_s3(filename, contents):
-    """Saves the contents to the filename in {BUCKET_NAME}/{S3_PATH}"""
-    s3 = boto3.resource("s3")
-    obj = s3.Object(BUCKET_NAME, S3_PATH.format(filename))
-    obj.put(Body=contents)
-
-
 def save_json_to_s3(prefix, data):
     """Save data as json on S3"""
-    save_to_s3(f"{prefix}.json", json.dumps(data))
+    save_to_s3(S3_PATH, f"{prefix}.json", json.dumps(data))
 
 
 @lru_cache()
 def load_json_from_s3(prefix):
     """Save data as json from S3"""
-    return json.loads(load_from_s3(f"{prefix}.json"))
+    return json.loads(load_from_s3(S3_PATH, f"{prefix}.json"))
 
 
 @lru_cache()

@@ -1,5 +1,5 @@
 """
-salaries.regex
+locations.regex
 --------------
 Regex to pull out locations, which attempts to extract a
 postcode outcode, then if not found, tidies up the raw
@@ -9,12 +9,11 @@ Run `regex.py` in `jupyter lab` (with `jupytext` installed)
 to see the model in action.
 """
 from functools import lru_cache
-import boto3
 import re
 
+from ojd_daps.flows.common import save_to_s3, load_from_s3
 
-S3_PATH = "labs/locations/regex/{}"
-BUCKET_NAME = "open-jobs-lake"
+S3_PATH = "labs/locations/regex/"
 
 
 def regex_model(outcode_regex, boilerplate_text):
@@ -35,35 +34,21 @@ def regex_model(outcode_regex, boilerplate_text):
     )
 
 
-def save_to_s3(filename, contents):
-    """Saves the contents to the filename in {BUCKET_NAME}/{S3_PATH}"""
-    s3 = boto3.resource("s3")
-    obj = s3.Object(BUCKET_NAME, S3_PATH.format(filename))
-    obj.put(Body=contents)
-
-
-def load_from_s3(filename):
-    """Loads the file contents from the filename at {BUCKET_NAME}/{S3_PATH}"""
-    s3 = boto3.client("s3")
-    obj = s3.get_object(Bucket=BUCKET_NAME, Key=S3_PATH.format(filename))
-    return obj["Body"].read().decode()
-
-
 def save_model(outcode_regex, boilerplate_text):
     """Save the model config to s3.
     Args:
         outcode_regex (str): The regex strategy for postcode area
         boilerplate_text (str): The regex strategy for basic cleaning
     """
-    save_to_s3("outcode_regex.txt", outcode_regex)
-    save_to_s3("boilerplate_text.txt", boilerplate_text)
+    save_to_s3(S3_PATH, "outcode_regex.txt", outcode_regex)
+    save_to_s3(S3_PATH, "boilerplate_text.txt", boilerplate_text)
 
 
 @lru_cache()  # <--- Important
 def load_model():
     """Loads the model"""
-    outcode_regex = load_from_s3("outcode_regex.txt")
-    boilerplate_text = load_from_s3("boilerplate_text.txt")
+    outcode_regex = load_from_s3(S3_PATH, "outcode_regex.txt")
+    boilerplate_text = load_from_s3(S3_PATH, "boilerplate_text.txt")
     return regex_model(outcode_regex, boilerplate_text)
 
 

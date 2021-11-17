@@ -8,7 +8,6 @@ addons:
       - docker-xenial
 services:
   - mysql
-cache: pip
 install:
   - virtualenv venv/
   - source venv/bin/activate
@@ -20,6 +19,8 @@ before_script:
   # NB: If you want any config for Travis, then make it yourself here:
   - echo -e "[mysqldb]\nuser=travis" > ojd_daps/config/mysqldb.config
   - echo -e "dummy" > ojd_daps/config/extract.yaml # dummy
+  - 'mkdir -p $HOME/.metaflowconfig && echo "{\"METAFLOW_DATASTORE_SYSROOT_S3\":\"s3://open-jobs-lake/metaflow\",\"METAFLOW_DATATOOLS_SYSROOT_S3\": \"s3://open-jobs-lake/metaflow/data\"}" > $HOME/.metaflowconfig/config.json'
+  - cat $HOME/.metaflowconfig/config.json
   - sudo rm -f /etc/boto.cfg
   - mysql -e 'CREATE DATABASE tests;'
   - mysql_upgrade -u root --force

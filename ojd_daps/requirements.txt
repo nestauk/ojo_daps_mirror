@@ -1,4 +1,5 @@
-daps-utils @ git+https://github.com/nestauk/daps_utils@dev#egg=daps-utils
+metaflow_extensions @ git+https://github.com/nestauk/metaflow_extensions@master#egg=metaflow_extensions
+daps-utils @ git+https://github.com/nestauk/daps_utils@117_docker_prune#egg=daps-utils
 metaflow @ git+https://github.com/jaklinger/metaflow@more_throttle#egg=metaflow
 mysql-connector-python==8.0.23
 numpy==1.21.1

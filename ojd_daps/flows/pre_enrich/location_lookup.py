@@ -29,6 +29,7 @@ from nuts_finder import NutsFinder as _NutsFinder
 from functools import lru_cache
 
 from metaflow import FlowSpec, step, S3, Parameter, batch, resources
+from ojd_daps.flows.common import get_chunks, flatten
 from daps_utils import talk_to_luigi, db, DapsFlowMixin
 from daps_utils.db import db_session, object_as_dict
 
@@ -199,8 +200,6 @@ class LocationMetadataFlow(FlowSpec, DapsFlowMixin):
         """
         Starts the flow.
         """
-        from common import get_chunks, flatten
-
         metadata = []
         for key in KEYS:
             key_metadata = read_csv(BUCKET, key)

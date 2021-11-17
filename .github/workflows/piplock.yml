@@ -33,5 +33,4 @@ jobs:
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY
           git fetch
           git checkout ${GITHUB_HEAD_REF}
-          git commit -am "Updated Pipfile and Pipfile.lock"
-          git push
+          git commit -am "Updated Pipfile and Pipfile.lock" && git push || echo "no changes since last push"

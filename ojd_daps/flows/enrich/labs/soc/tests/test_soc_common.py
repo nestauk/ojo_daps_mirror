@@ -1,8 +1,7 @@
 from unittest import mock
 import pytest
 from ojd_daps.flows.enrich.labs.soc.common import (
-    load_from_s3,
-    save_to_s3,
+    S3_PATH,
     save_json_to_s3,
     load_json_from_s3,
     _load_metadata,
@@ -23,31 +22,14 @@ def sample_text():
     return "thiES23989 Are 12321.12?Some12.21424 232Digits!"
 
 
-@mock.patch(PATH.format("boto3"))
-def test_load_from_s3(mocked_boto):
-    s3 = mocked_boto.client()
-    file_obj = s3.get_object().__getitem__().read()
-    file_obj.decode.return_value = "hello"
-    assert load_from_s3("blah") == "hello"
-
-
-@mock.patch(PATH.format("boto3"))
-def test_save_to_s3(mocked_boto):
-    s3 = mocked_boto.resource()
-    obj = s3.Object()
-    save_to_s3("blah", "the content!")
-    args, kwargs = obj.put.call_args
-    assert kwargs == {"Body": "the content!"}
-
-
 @mock.patch(PATH.format("save_to_s3"))
 def test_save_json_to_s3(mocked_save):
     save_json_to_s3("something", {"some data": "a value"})
     args, kwargs = mocked_save.call_args
-    assert args == ("something.json", '{"some data": "a value"}')
+    assert args == (S3_PATH, "something.json", '{"some data": "a value"}')
 
 
-@mock.patch(PATH.format("load_from_s3"), side_effect=lambda x: rf'{{"x": "{x}"}}')
+@mock.patch(PATH.format("load_from_s3"), side_effect=lambda _, x: rf'{{"x": "{x}"}}')
 def test_load_json_from_s3(mocked_load):
     assert load_json_from_s3("something") is load_json_from_s3("something")
     assert load_json_from_s3("abc") == {"x": "abc.json"}  # <-- note suffix

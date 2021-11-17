@@ -15,7 +15,11 @@ import json
 from metaflow import FlowSpec, step, S3, batch
 from daps_utils import talk_to_luigi, DapsFlowMixin
 from daps_utils.db import object_as_dict
+
 from labs.salaries.common import extract_salary
+from ojd_daps.flows.common import get_chunks
+from ojd_daps.orms.raw_jobs import RawJobAd
+
 
 CHUNKSIZE = 20000
 
@@ -36,9 +40,6 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
         """
         Gets adverts, breaks up into chunks of 20,000.
         """
-        from common import get_chunks
-        from ojd_daps.orms.raw_jobs import RawJobAd
-
         limit = 2 * CHUNKSIZE if self.test else None
         with self.db_session(database="dev") as session:
             jobad_query = session.query(

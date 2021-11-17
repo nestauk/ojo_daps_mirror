@@ -16,6 +16,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from metaflow import FlowSpec, step, S3, resources, Parameter, batch
 
+from ojd_daps.flows.common import flatten, get_chunks
 from daps_utils import talk_to_luigi
 
 S3_PATH = "s3://open-jobs-lake/most_recent_jobs/{level}/indeed/"
@@ -149,8 +150,6 @@ class IndeedAdCurateFlow(FlowSpec):
         """
         Convert the ads into chunks of 1000.
         """
-        from common import get_chunks
-
         limit = min(CAP, len(self.job_ads)) if self.test else None
         self.chunks = get_chunks(self.job_ads, CHUNKSIZE)
         self.next(self.extract_ad_details, foreach="chunks")
@@ -174,8 +173,6 @@ class IndeedAdCurateFlow(FlowSpec):
         """
         Join the outputs of the processing.
         """
-        from common import flatten
-
         self.data = flatten(input.ad_details for input in inputs)
         self.next(self.end)
 

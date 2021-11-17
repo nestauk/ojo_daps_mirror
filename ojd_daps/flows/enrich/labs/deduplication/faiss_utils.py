@@ -36,28 +36,14 @@ would have at least 1000 members and so the default value of
 """
 
 import numpy as np
-import boto3
 import faiss
 import importlib
+from ojd_daps.flows.common import save_to_s3, load_from_s3
+
 
 FLOAT_TYPE = np.float32
 STR_TYPE = np.dtype("U40")
-S3_PATH = "labs/deduplication/faiss/{}"
-BUCKET_NAME = "open-jobs-lake"
-
-
-def save_to_s3(filename, contents):
-    """Saves the contents to the filename in {BUCKET_NAME}/{S3_PATH}"""
-    s3 = boto3.resource("s3")
-    obj = s3.Object(BUCKET_NAME, S3_PATH.format(filename))
-    obj.put(Body=contents)
-
-
-def load_from_s3(filename):
-    """Loads the file contents from the filename at {BUCKET_NAME}/{S3_PATH}"""
-    s3 = boto3.client("s3")
-    obj = s3.get_object(Bucket=BUCKET_NAME, Key=S3_PATH.format(filename))
-    return obj["Body"].read().decode()
+S3_PATH = "labs/deduplication/faiss/"
 
 
 def save_model(
@@ -83,20 +69,20 @@ def save_model(
                                 (default=faiss.METRIC_L1)
         score_threshold (float): See above for definition. (default=0.8)
     """
-    save_to_s3("k.txt", k)
-    save_to_s3("k_large.txt", k_large)
-    save_to_s3("n_clusters.txt", n_clusters)
-    save_to_s3("score_threshold.txt", score_threshold)
-    save_to_s3("metric.txt", metric)
+    save_to_s3(S3_PATH, "k.txt", k)
+    save_to_s3(S3_PATH, "k_large.txt", k_large)
+    save_to_s3(S3_PATH, "n_clusters.txt", n_clusters)
+    save_to_s3(S3_PATH, "score_threshold.txt", score_threshold)
+    save_to_s3(S3_PATH, "metric.txt", metric)
 
 
 def load_model(data, ids):
     """Loads the model"""
-    k = int(load_from_s3("k.txt"))
-    k_large = int(load_from_s3("k_large.txt"))
-    n_clusters = int(load_from_s3("n_clusters.txt"))
-    score_threshold = float(load_from_s3("score_threshold.txt"))
-    metric = load_from_s3("metric.txt")
+    k = int(load_from_s3(S3_PATH, "k.txt"))
+    k_large = int(load_from_s3(S3_PATH, "k_large.txt"))
+    n_clusters = int(load_from_s3(S3_PATH, "n_clusters.txt"))
+    score_threshold = float(load_from_s3(S3_PATH, "score_threshold.txt"))
+    metric = load_from_s3(S3_PATH, "metric.txt")
     metric = class_for_name("faiss", metric)
     return find_similar_vectors(
         data, ids, k, k_large, n_clusters, metric, score_threshold

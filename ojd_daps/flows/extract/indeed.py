@@ -2,19 +2,12 @@
 Flow to extract raw job advert information from indeed ad
 html files.
 """
-
-import os
-
-os.system(
-    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
-)
 import json
-import lxml
 import re
 
 from bs4 import BeautifulSoup
 from datetime import datetime
-from metaflow import FlowSpec, step, S3, resources, Parameter, batch
+from metaflow import FlowSpec, step, S3, Parameter
 
 from ojd_daps.flows.common import flatten, get_chunks
 from daps_utils import talk_to_luigi

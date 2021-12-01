@@ -2,23 +2,14 @@
 Flow to extract raw job advert information from reed ad
 html files.
 """
-
-import os
-
-os.system(
-    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
-)
 import json
 import re
 import boto3
 
-import lxml
-import lxml.html
-from bs4 import BeautifulSoup as _BeautifulSoup
 from daps_utils import talk_to_luigi, DapsFlowMixin
 
 from ojd_daps.flows.common import get_chunks
-from metaflow import S3, FlowSpec, Parameter, batch, step, retry
+from metaflow import S3, FlowSpec, batch, step, retry, pip
 
 BUCKET = "open-jobs-lake"
 PREFIX = "most_recent_jobs/production/reed/"
@@ -53,6 +44,8 @@ def BeautifulSoup(text):
     Hardcode html parser to lxml. Breaking with funciton naming conventions
     (lower_snake --> UpperCamel) to shadow the original class BeautifulSoup.
     """
+    from bs4 import BeautifulSoup as _BeautifulSoup
+
     return _BeautifulSoup(text, "lxml")
 
 
@@ -151,6 +144,8 @@ def strip_html(text):
     stripped_html : str
         Text stripped of html
     """
+    import lxml.html
+
     stripped_html = lxml.html.fromstring(text).text_content() if text else " "
     return stripped_html
 
@@ -191,8 +186,9 @@ class ReedAdCurateFlow(FlowSpec, DapsFlowMixin):
         self.chunks = get_chunks(keys, CHUNKSIZE)
         self.next(self.extract_ad_details, foreach="chunks")
 
-    @batch
     @retry
+    @batch
+    @pip(path="requirements.txt")
     @step
     def extract_ad_details(self):
         """

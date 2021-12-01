@@ -19,8 +19,11 @@ def test_define_processed_location():
     assert define_processed_location(OUTCODE_LOCATION) == "S1"
 
 
-@mock.patch("ojd_daps.flows.enrich.locations.db_session")
-def test_location_lookup(mocked_session):
+def test_location_lookup():
     data = [("code1", "name1"), ("code2", "name1"), ("code3", "name2")]
-    mocked_session().__enter__().query().all.return_value = data
-    assert dict(location_lookup()) == {"name1": ["code1", "code2"], "name2": ["code3"]}
+    mocked_session = mock.MagicMock()
+    mocked_session.query().all.return_value = data
+    assert dict(location_lookup(mocked_session)) == {
+        "name1": ["code1", "code2"],
+        "name2": ["code3"],
+    }

@@ -1,8 +1,6 @@
 metaflow_extensions @ git+https://github.com/nestauk/metaflow_extensions@master#egg=metaflow_extensions
-daps-utils @ git+https://github.com/nestauk/daps_utils@117_docker_prune#egg=daps-utils
+daps-utils @ git+https://github.com/nestauk/daps_utils@dev#egg=daps-utils
 metaflow @ git+https://github.com/jaklinger/metaflow@more_throttle#egg=metaflow
-mysql-connector-python==8.0.23
-numpy==1.21.1
 pytest-timeout==1.4.2
 python_dateutil==2.8.1
 PyMySQL==1.0.2
@@ -14,5 +12,3 @@ bs4==0.0.1
 lxml>=4.6.3
 cloudscraper>=1.2.48
 urllib3>=1.26.5
-networkx>=2.6.2
-tqdm>=4.62.2

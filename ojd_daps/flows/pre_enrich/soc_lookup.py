@@ -4,14 +4,6 @@ SOC lookup
 
 A Flow for generating a lookup table of SOC job titles to SOC codes
 """
-import os
-
-for reqs in ["", "_soc"]:
-    os.system(
-        f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/"
-        f"requirements{reqs}.txt 1> /dev/null"
-    )
-
 import json
 from hashlib import md5
 from metaflow import FlowSpec, step, S3

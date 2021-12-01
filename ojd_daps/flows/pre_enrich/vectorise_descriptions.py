@@ -4,39 +4,15 @@ vectorise_descriptions_flow
 
 A Flow for vectorising descriptions from job adverts.
 """
-# Required for batch
-import os
-
-for reqs in ["", "_transform"]:
-    os.system(
-        f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/"
-        f"requirements{reqs}.txt 1> /dev/null"
-    )
-
 import json
-import re
-from sqlalchemy.sql.expression import func
 
-from metaflow import FlowSpec, step, S3, Parameter, batch, resources, retry
-from daps_utils import talk_to_luigi, db, DapsFlowMixin
-from daps_utils.db import db_session, object_as_dict
-from sentence_transformers import SentenceTransformer
+from metaflow import FlowSpec, step, S3, batch, retry, pip
+from daps_utils import talk_to_luigi, DapsFlowMixin
+from daps_utils.db import object_as_dict
 
-try:
-    from ojd_daps.orms.raw_jobs import RawJobAd
-except ModuleNotFoundError:  # Exception on batch
-    pass
+import ojd_daps
+from ojd_daps.orms.raw_jobs import RawJobAd
 
-#
-try:
-    import ojd_daps
-except ModuleNotFoundError:  # Exception on batch
-    ojd_daps = None
-from daps_utils import db
-
-db.CALLER_PKG = ojd_daps
-db_session = db.db_session
-#
 
 MODEL_NAME = "distilbert-base-nli-stsb-mean-tokens"
 CHUNKSIZE = 5000
@@ -44,6 +20,8 @@ CHUNKSIZE = 5000
 
 def load_model(model_name):
     """Load the sentence transformer"""
+    from sentence_transformers import SentenceTransformer
+
     return SentenceTransformer(model_name)
 
 
@@ -88,6 +66,9 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
         """
         Starts the flow.
         """
+        # >>> Workaround for metaflow introspection
+        self.set_caller_pkg(ojd_daps)
+        # <<<
         self.next(self.get_descriptions)
 
     @step
@@ -95,9 +76,11 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
         """
         Gets locations, breaks up into chunks of CHUNKSIZE.
         """
+        from sqlalchemy.sql.expression import func
+
         non_empty_text = func.length(RawJobAd.description) > 5
         self.chunks = []
-        with db_session(database="production") as session:
+        with self.db_session(database="production") as session:
             # Create a base query, over which we will filter/iterate in chunks
             base_query = session.query(RawJobAd.id, RawJobAd.description)
             base_query = base_query.filter(non_empty_text).order_by(RawJobAd.id)
@@ -117,6 +100,7 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
         self.next(self.vectorise_descriptions, foreach="chunks")
 
     @retry
+    @pip(path="requirements_transform.txt")
     @batch(cpu=8, memory=32000)
     @step
     def vectorise_descriptions(self):

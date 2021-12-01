@@ -4,22 +4,15 @@ salaries_flow
 
 A Flow for extracting a standardised salary from raw job adverts.
 """
-# Required for batch
-import os
-
-os.system(
-    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
-)
-
 import json
-from metaflow import FlowSpec, step, S3, batch
+from metaflow import FlowSpec, step, S3, batch, pip
 from daps_utils import talk_to_luigi, DapsFlowMixin
 from daps_utils.db import object_as_dict
 
 from labs.salaries.common import extract_salary
 from ojd_daps.flows.common import get_chunks
 from ojd_daps.orms.raw_jobs import RawJobAd
-
+import ojd_daps
 
 CHUNKSIZE = 20000
 
@@ -29,8 +22,6 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
         # >>> Workaround for metaflow introspection
-        import ojd_daps
-
         self.set_caller_pkg(ojd_daps)
         # <<<
         self.next(self.get_adverts)
@@ -56,6 +47,7 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
         self.next(self.extract_salaries, foreach="chunks")
 
     @batch(cpu=4)  # cpu=4 to limit the number of containers per batch (diskspace issue)
+    @pip(path="requirements.txt")
     @step
     def extract_salaries(self):
         """

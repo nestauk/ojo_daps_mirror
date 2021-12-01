@@ -13,6 +13,7 @@ do
     cd $TOPDIR/$FLOWDIR/$DIRNAME
     echo $PWD
     ls requirements.txt &> /dev/null && pip install -r requirements.txt || echo "no requirements.txt to install"
+    ls requirements_test.txt &> /dev/null && pip install -r requirements_test.txt || echo "no requirements.txt to install"
     # Run the tests
     PYTHONPATH=$BASE_PYTHONPATH:$PWD pytest -x .
     # Revert back the base venv

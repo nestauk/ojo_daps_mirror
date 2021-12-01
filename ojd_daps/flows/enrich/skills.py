@@ -3,16 +3,11 @@ skills_flow
 -------------
 A Flow for extracting a skills from raw job adverts.
 """
-# Required for batch
-import os
-
-os.system(
-    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
-)
 import json
 from common import generate_description_queries, retrieve_job_ads
-from metaflow import FlowSpec, step, S3, Parameter, batch
+from metaflow import FlowSpec, step, S3, batch, pip
 from daps_utils import talk_to_luigi, DapsFlowMixin
+import ojd_daps
 
 CHUNKSIZE = 5000
 MODEL_VERSION = "v02_1"
@@ -26,8 +21,6 @@ class SkillsFlow(FlowSpec, DapsFlowMixin):
         Starts the flow.
         """
         # >>> Workaround for metaflow introspection
-        import ojd_daps
-
         self.set_caller_pkg(ojd_daps)
         # <<<
         self.next(self.get_adverts)
@@ -41,6 +34,7 @@ class SkillsFlow(FlowSpec, DapsFlowMixin):
         self.next(self.extract_skills, foreach="queries")
 
     @batch(cpu=4, memory=16000)
+    @pip(path="requirements.txt")
     @step
     def extract_skills(self):
         """

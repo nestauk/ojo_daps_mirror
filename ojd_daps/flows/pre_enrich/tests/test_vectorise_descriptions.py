@@ -3,12 +3,13 @@ from ojd_daps.flows.pre_enrich.vectorise_descriptions import (
     truncate_and_jsonify,
     encode_job_ads,
     MODEL_NAME,
-    SentenceTransformer,
 )
 import numpy as np
 
 
 def test_load_model():
+    from sentence_transformers import SentenceTransformer
+
     assert type(load_model(MODEL_NAME)) is SentenceTransformer
 
 

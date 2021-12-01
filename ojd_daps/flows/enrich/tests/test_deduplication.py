@@ -2,7 +2,7 @@ import pytest
 from unittest import mock
 import datetime
 
-from ojd_daps.flows.enrich.deduplication import (
+from ojd_daps.flows.enrich.deduplication_utils import (
     get_sliding_windows,
     query_and_bundle,
     prefill_inputs,
@@ -12,9 +12,9 @@ from ojd_daps.flows.enrich.deduplication import (
     download_vectors,
     generate_window_query_chunks,
 )
-from ojd_daps.flows.enrich.deduplication import VECTOR_DIM, np, json, CHUNKSIZE
+from ojd_daps.flows.enrich.deduplication_utils import VECTOR_DIM, np, json, CHUNKSIZE
 
-PATH = "ojd_daps.flows.enrich.deduplication.{}"
+PATH = "ojd_daps.flows.enrich.deduplication_utils.{}"
 START_DATE = datetime.datetime(2020, 10, 16, 0, 0)
 END_DATE = datetime.datetime(2020, 12, 1, 0, 0)
 

@@ -4,46 +4,16 @@ location lookup
 
 A Flow for generating a lookup table of UK place names to GSS and NUTS locations
 """
-# >>> Required for batch
-import os
-from ctypes.util import find_library
-
-if not find_library("geos_c"):  # Need to install this for NutsFinder --> Shapely
-    os.system(
-        "apt-get update && apt-get -y dist-upgrade && apt-get -y install libgeos-dev &> /dev/null"
-    )
-
-for reqs in ["", "_nuts"]:
-    os.system(
-        f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/"
-        f"requirements{reqs}.txt 1> /dev/null"
-    )
-# <<<
-
 import boto3
 import csv
 from io import StringIO
 import re
 import json
-from nuts_finder import NutsFinder as _NutsFinder
 from functools import lru_cache
 
-from metaflow import FlowSpec, step, S3, Parameter, batch, resources
+from metaflow import FlowSpec, step, S3, batch, pip
 from ojd_daps.flows.common import get_chunks, flatten
-from daps_utils import talk_to_luigi, db, DapsFlowMixin
-from daps_utils.db import db_session, object_as_dict
-
-
-# >>> Workaround until db_session can introspect metaflow
-try:
-    import ojd_daps
-except ModuleNotFoundError:  # Exception on batch
-    ojd_daps = None
-from daps_utils import db
-
-db.CALLER_PKG = ojd_daps
-db_session = db.db_session
-# <<<
+from daps_utils import talk_to_luigi, DapsFlowMixin
 
 CHUNKSIZE = 1000
 # Lookups for converting ONS names to human-readable
@@ -139,6 +109,8 @@ def NutsFinder():
     but using less granular scales will result in missing places near
     bodies of water
     """
+    from nuts_finder import NutsFinder as _NutsFinder
+
     return _NutsFinder(scale=1)
 
 
@@ -212,6 +184,7 @@ class LocationMetadataFlow(FlowSpec, DapsFlowMixin):
         self.next(self.transform_metadata, foreach="metadata")
 
     @batch(cpu=4)
+    @pip(path="requirements_nuts.txt")
     @step
     def transform_metadata(self):
         """Pulls out the required fields and identifies NUTS region"""

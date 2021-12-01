@@ -16,18 +16,12 @@ Explanation:
     * package-suffixes=.txt will include the local requirements.txt in the AWS batch bundle
     * datastore=s3 is stipulated by metaflow when using the @batch decorator, so it can write to somewhere!
 """
-# Required for batch
-import os
-
-os.system(
-    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
-)
 from daps_utils import talk_to_luigi
 import requests_cache
 import numpy as np
 
 from metaflow import FlowSpec, step, S3
-from metaflow import Parameter, batch
+from metaflow import Parameter, batch, pip
 import json
 import requests
 
@@ -136,7 +130,8 @@ class BatchDemoFlow(FlowSpec):
         )
         self.next(self.get_data, foreach="pages")
 
-    @batch()
+    @batch
+    @pip(path="requirements.txt")
     @step
     def get_data(self):
         """Get the row of data for this page number, noting that

@@ -4,18 +4,11 @@ requires_degree flow
 A Metaflow Flow for extracting a degree requirement (true/false) from raw job adverts.
 """
 import json
-
-# Required for batch
-import os
-
-os.system(
-    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
-)
-
 from common import generate_description_queries, retrieve_job_ads
-from daps_utils import talk_to_luigi
-from metaflow import FlowSpec, step, S3, batch
-from daps_utils.flow import DapsFlowMixin
+from metaflow import FlowSpec, step, S3, batch, pip
+
+import ojd_daps
+from daps_utils import talk_to_luigi, DapsFlowMixin
 
 CHUNKSIZE = 5000
 
@@ -28,8 +21,6 @@ class RequiresDegreeFlow(FlowSpec, DapsFlowMixin):
         Starts the flow.
         """
         # >>> Workaround for metaflow introspection
-        import ojd_daps
-
         self.set_caller_pkg(ojd_daps)
         # <<<
         self.next(self.get_adverts)
@@ -43,6 +34,7 @@ class RequiresDegreeFlow(FlowSpec, DapsFlowMixin):
         self.next(self.extract_requires_degree, foreach="queries")
 
     @batch(cpu=2, memory=8000)
+    @pip(path="requirements.txt")
     @step
     def extract_requires_degree(self):
         """

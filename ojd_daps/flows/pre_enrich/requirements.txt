@@ -1,5 +1,2 @@
 git+git://github.com/jaklinger/metaflow@more_throttle
-git+git://github.com/nestauk/daps_utils@dev
 numpy==1.21.1
-PyMySQL==1.0.2
-mysql-connector-python==8.0.23

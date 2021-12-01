@@ -4,32 +4,13 @@ jobs_by_locations_flow
 
 A Flow for aggregating jobs by locations.
 """
-# Required for batch
-import os
-
-os.system(
-    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
-)
 import json
-import re
-
 from sqlalchemy import func
-
-from metaflow import FlowSpec, step, S3, Parameter, batch, resources
-
-from ojd_daps.orms.std_features import Location
-from ojd_daps.orms.raw_jobs import RawJobAd
-from ojd_daps.orms.link_tables import JobAdLocationLink
-
-from daps_utils import talk_to_luigi, db
-from daps_utils.flow import DapsFlowMixin
-from daps_utils.db import db_session, object_as_dict
+from metaflow import FlowSpec, step, S3
 
 import ojd_daps
-from daps_utils import db
-
-db.CALLER_PKG = ojd_daps
-db_session = db.db_session
+from ojd_daps.orms.link_tables import JobAdLocationLink
+from daps_utils import talk_to_luigi, DapsFlowMixin
 
 
 @talk_to_luigi
@@ -39,6 +20,9 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
         """
         Starts the flow.
         """
+        # >>> Workaround for metaflow introspection
+        self.set_caller_pkg(ojd_daps)
+        # <<<
         self.next(self.get_data)
 
     @step
@@ -47,11 +31,11 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
         Queries the aggregation from the database.
         """
         limit = 1000 if self.test else None
-        with db_session(database=self.db_name) as session:
+        with self.db_session(database="production") as session:
             loc_id = JobAdLocationLink.location_id
             count = func.count(loc_id).label("count")
             query = session.query(loc_id, count).group_by(loc_id)
-            self.data = [obj._asdict() for obj in query.all()]
+            self.data = [obj._asdict() for obj in query.limit(limit)]
         self.next(self.end)
 
     @step
@@ -62,7 +46,7 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
         filename = f"jobs_by_locs_test-{self.test}.json"
         with S3(run=self) as s3:
             data = json.dumps(self.data)
-            url = s3.put(filename, data)
+            s3.put(filename, data)
 
 
 if __name__ == "__main__":

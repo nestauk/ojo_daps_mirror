@@ -4,41 +4,23 @@ locations_flow
 
 A Flow for extracting a standardised location from raw locations.
 """
-# Required for batch
-import os
-
-# >>> Workaround for batch
-os.system(
-    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
-)
-# <<<
-
 import json
 import re
 from collections import defaultdict
-from metaflow import FlowSpec, step, S3, Parameter, batch, resources
+from metaflow import FlowSpec, step, S3
 
-from daps_utils import talk_to_luigi, db
+from daps_utils import talk_to_luigi
 from daps_utils.flow import DapsFlowMixin
-from daps_utils.db import db_session, object_as_dict
 
+import ojd_daps
 from ojd_daps.flows.enrich.common import get_chunks
 from ojd_daps.orms.std_features import Location
 from ojd_daps.orms.raw_jobs import RawJobAd as JobAd  # abbreviate
 
-# >>> Workaround for batch
-import ojd_daps
-from daps_utils import db
-
-db.CALLER_PKG = ojd_daps
-db_session = db.db_session
-# <<<
-
-
 CHUNKSIZE = 300000  # Leads to output filesizes of ~20MB
 
 
-def location_lookup():
+def location_lookup(session):
     """
     Retrieves all of the location lookups from the production database,
     i.e. regardless of whether we are in "test" mode or not.
@@ -50,10 +32,9 @@ def location_lookup():
     a placename is not unique.
     """
     lookup = defaultdict(list)
-    with db_session(database="production") as session:
-        query = session.query(Location.ipn_18_code, Location.ipn_18_name)
-        for code, name in query.all():
-            lookup[process_location(name)].append(code)
+    query = session.query(Location.ipn_18_code, Location.ipn_18_name)
+    for code, name in query.all():
+        lookup[process_location(name)].append(code)
     return lookup
 
 
@@ -103,6 +84,9 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
         """
         Starts the flow.
         """
+        # >>> Workaround for metaflow introspection
+        self.set_caller_pkg(ojd_daps)
+        # <<<
         self.next(self.get_locations)
 
     @step
@@ -110,7 +94,7 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
         """
         Gets locations.
         """
-        with db_session(database=self.db_name) as session:
+        with self.db_session(database=self.db_name) as session:
             query = session.query(JobAd.id, JobAd.job_location_raw, JobAd.data_source)
             query = query.filter(JobAd.job_location_raw is not None)
             self.job_locations = {
@@ -125,7 +109,8 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
         Matches each available job ad location to >> at least zero << standardised
         locations - i.e. multiple matches, or zero matches are allowed.
         """
-        lookup = location_lookup()
+        with self.db_session(database="production") as session:
+            lookup = location_lookup(session)
         self.link_table = [
             {"job_id": _id, "job_data_source": src, "location_id": location_id}
             for _id, (location, src) in self.job_locations.items()

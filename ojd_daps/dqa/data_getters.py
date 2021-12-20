@@ -7,12 +7,14 @@ Utils for retrieving data from either S3 or the database
 
 import boto3
 from random import uniform
-from collections import defaultdict
+from functools import lru_cache
+from collections import defaultdict, Counter
 from decimal import Decimal
 from itertools import groupby
 from datetime import datetime as dt
 import networkx
 from sqlalchemy import func as sql_func
+from sqlalchemy import desc as sql_desc
 import logging
 import os
 
@@ -187,6 +189,7 @@ def get_db_job_ads(
                 break
 
 
+@lru_cache()
 @cache.memoize(chunksize=10000)
 def get_duplicate_ids(min_weight, max_weight, split_by_location, from_date, to_date):
     """
@@ -408,27 +411,119 @@ def get_requires_degree():
             yield row
 
 
-@cache.memoize(chunksize=10000)
-def get_skills():
+@cache.memoize()
+def get_skills_lookup():
+    """Get lookup of entity number to skills"""
+    with db.db_session("production") as session:
+        q = session.query(
+            JobAdSkillLink.entity,
+            JobAdSkillLink.surface_form,
+            JobAdSkillLink.surface_form_type,
+            JobAdSkillLink.preferred_label,
+            JobAdSkillLink.cluster_0,
+            JobAdSkillLink.cluster_1,
+            JobAdSkillLink.cluster_2,
+            JobAdSkillLink.label_cluster_0,
+            JobAdSkillLink.label_cluster_1,
+            JobAdSkillLink.label_cluster_2,
+        ).group_by(JobAdSkillLink.entity)
+        # Keys have to be string in JSON, and since the result is cached
+        # it is necessary to explicitly cast the entity number to str
+        return {str(row.pop("entity")): row for row in map(db.object_as_dict, q.all())}
+
+
+def get_entity_chunks(chunksize):
+    """
+    Get all unique "entity" values, split into sublists where
+    the length of each sublist multiplied by the frequency of each entity
+    value is roughly equal to chunksize. In order to minimise the number of
+    sublists we must maximise the packing of entities into each sublist.
+    Minimising the number of sublists reduces the total number of server round trips
+    in _get_skills.
+    """
+    entity_chunks = []
+
+    with db.db_session("production") as session:
+        # Get a lookup of entity to frequency of that entity across job ads
+        entity_query = (
+            session.query(JobAdSkillLink.entity, sql_func.count(JobAdSkillLink.entity))
+            .group_by(JobAdSkillLink.entity)
+            .order_by(sql_desc(sql_func.count(JobAdSkillLink.entity)))
+        )
+        # Pack sublists ("chunks") as much as possible, by starting with the most
+        # frequently occuring entities
+        for entity, count in entity_query:
+            # Search for any chunks that we can pack this entity into
+            matched_chunk = False
+            for chunk in entity_chunks:
+                # If this is true then we can fit this entity into this chunk
+                if sum(chunk.values()) + count <= chunksize:
+                    chunk[entity] = count
+                    matched_chunk = True
+                    break  # Only pack each entity into one chunk!
+            # Create a new chunk if the entity won't fit into existing chunks
+            if not matched_chunk:
+                entity_chunks.append(Counter({entity: count}))
+    # Return a list of lists from the list of dict keys
+    return list(map(list, map(dict.keys, entity_chunks)))
+
+
+@cache.memoize(chunksize=10_000)
+def _get_skills(chunksize=100_000):
     """
     Retrieve skills group data which we have assigned to each job advert.
 
     Yields:
         row (dict): Job advert IDs matched to a skills group.
     """
+    # Fetch unique sorted values of JobAdSkillLink.entity from the cached lookup
+    _entity = JobAdSkillLink.entity
+    _job_id = JobAdSkillLink.job_id
+    entity_chunks = get_entity_chunks(chunksize)
+
     with db.db_session("production") as session:
-        for row in map(db.object_as_dict, session.query(JobAdSkillLink).all()):
-            # Don't need the __version__ field, this is implied in the job_ads data
-            row.pop("job_data_source")
-            row.pop("__version__")
-            row["job_id"] = str(row.pop("job_id"))
-            yield {
-                column: (float(value) if type(value) is Decimal else value)
-                for column, value in row.items()
-            }
+        # Iterate over each value of entity, as it's indexed and so is useful
+        # for speeding up chunk retrieval
+        base_query = session.query(_job_id, _entity).order_by(_entity, _job_id)
+        for entity_chunk in entity_chunks:
+            _base_query = base_query.filter(_entity.in_(entity_chunk))
+            n_chunks, still_reading = 0, True
+            while still_reading:
+                still_reading = False
+                q = _base_query.limit(chunksize).offset(n_chunks * chunksize)
+                for job_id, entity in q.all():
+                    still_reading = True
+                    yield {"job_id": str(job_id), "entity": str(entity)}
+                n_chunks += 1
 
 
-@cache.memoize()
+def get_skills():
+    """
+    Retrieve skills group data which we have assigned to each job advert.
+    The reason for using groupby is to reduce the number of lookups
+    given that the number of unique values of `entity` is fairly low
+    (i.e. there are 100-millions of rows, but only 1000s of entity values).
+    This function isn't cached as this dynamic lookup appears to be faster
+    than loading from the diskcache, given that the data is pre-sorted.
+
+    Yields:
+        row (dict): Job advert IDs matched to a skills group.
+    """
+    grouped_rows = defaultdict(list)
+    skills_lookup = get_skills_lookup()
+    # NB: skills are presorted in the query
+    for entity, rows in groupby(_get_skills(), key=lambda row: row["entity"]):
+        lookup = skills_lookup[str(entity)]  # One lookup for common values of entity
+        for row in rows:
+            row.update(lookup)  # update faster than new dict
+            job_id = row.pop("job_id")
+            grouped_rows[job_id].append(row)
+
+    for job_id, rows in grouped_rows.items():
+        yield {"job_id": job_id, "skills": rows}
+
+
+@lru_cache()
 def get_features(location_level="nuts_2"):
     """
     Retrieve the predicted feature collection for all job adverts.
@@ -443,16 +538,16 @@ def get_features(location_level="nuts_2"):
     feature_getters = [
         ("salary", get_salaries),
         ("location", lambda: get_locations(location_level, do_lookup=True)),
-        ("soc", get_soc),
-        # ("skills", get_skills),
-        ("requires_degree", get_requires_degree),
+        # ("soc", get_soc),
+        ("skills", get_skills),
+        # ("requires_degree", get_requires_degree),
     ]
     # Generate the feature collection for all job adverts
     features = defaultdict(dict)
     for feature_name, getter in feature_getters:
         logging.info(f"Retrieving feature '{feature_name}'")
         for row in getter():  # one per predicted job ad
-            features[row.pop("job_id")][feature_name] = row
+            features[row["job_id"]][feature_name] = row
     return dict(features)  # Undefault the defaultdict
 
 

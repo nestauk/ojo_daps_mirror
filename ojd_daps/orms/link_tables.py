@@ -88,7 +88,6 @@ class JobAdESCOLink(Base, LinkBase):
 
 class JobAdSkillLink(Base, LinkBase):
     __tablename__ = "job_ad_skill_links"
-    job_id = fixture("pk")
     surface_form = fixture("text")
     surface_form_type = fixture("text")
     preferred_label = fixture("text")

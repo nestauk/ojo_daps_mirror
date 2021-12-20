@@ -4,6 +4,7 @@ import os
 os.environ["DATA_GETTERS_DISKCACHE"] = "0"
 
 from ojd_daps.dqa.data_getters import (
+    _get_skills,
     get_s3_job_ads,
     get_db_job_ads,
     get_locations,
@@ -15,6 +16,7 @@ from ojd_daps.dqa.data_getters import (
     get_duplicate_subgraphs,
     get_subgraphs_by_location,
     identify_duplicates,
+    get_entity_chunks,
 )
 
 from ojd_daps.dqa.data_getters import Decimal
@@ -183,21 +185,59 @@ def test_get_salaries(mocked_db):
 
 
 @mock.patch(PATH.format("db"))
-def test_get_skills(mocked_db):
+def test_get_entity_chunks(mocked_db):
     session = mocked_db.db_session().__enter__()
-    session.query().all.return_value = [
-        {
-            "job_data_source": "foo",
-            "job_id": 123,
-            "__version__": "bar",
-            "a_decimal": Decimal("12.3"),
-            "a_float": 23.4,
-            "a_str": "45.6",
-        }
+    session.query().group_by().order_by.return_value = (
+        ("foo", 8),  # will combine with eggs since 8 + 1 <= 10
+        ("bar", 7),  # will combine with spam since 7 + 3 <= 10
+        ("spam", 3),
+        ("eggs", 1),
+    )
+    assert get_entity_chunks(chunksize=10) == [["foo", "eggs"], ["bar", "spam"]]
+
+
+@mock.patch(PATH.format("get_entity_chunks"), return_value=[[None, None]])
+@mock.patch(PATH.format("db"))
+def test__get_skills(mocked_db, mocked_get_chunks):
+    session = mocked_db.db_session().__enter__()
+    session.query().order_by().filter().limit().offset().all.side_effect = [
+        [["a job id", "an entity"], ["another id", "another entity"]],  # First chunk
+        [],  # N'th chunk --> StopIteration
     ]
     mocked_db.object_as_dict.side_effect = lambda x: x
+    assert list(_get_skills()) == [
+        {
+            "job_id": "a job id",
+            "entity": "an entity",
+        },
+        {
+            "job_id": "another id",
+            "entity": "another entity",
+        },
+    ]
+
+
+@mock.patch(PATH.format("_get_skills"))
+@mock.patch(PATH.format("get_skills_lookup"))
+def test_get_skills(mocked_lookup, mocked__get_skills):
+    mocked_lookup.return_value = {"foo": {"value": "spam"}, "bar": {"value": "eggs"}}
+    mocked__get_skills.return_value = (
+        {"job_id": "123", "entity": "foo"},
+        {"job_id": "234", "entity": "foo"},
+        {"job_id": "234", "entity": "bar"},
+        {"job_id": "345", "entity": "bar"},
+    )
+
     assert list(get_skills()) == [
-        {"job_id": "123", "a_decimal": 12.3, "a_float": 23.4, "a_str": "45.6"}
+        {"job_id": "123", "skills": [{"entity": "foo", "value": "spam"}]},
+        {
+            "job_id": "234",
+            "skills": [
+                {"entity": "foo", "value": "spam"},
+                {"entity": "bar", "value": "eggs"},
+            ],
+        },
+        {"job_id": "345", "skills": [{"entity": "bar", "value": "eggs"}]},
     ]
 
 

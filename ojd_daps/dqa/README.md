@@ -26,7 +26,42 @@ export PYTHONPATH=$PWD
 
 from the project root directory (`ojd_daps`).
 
-## Getting Data
+## Getting job ad data quickly
+
+The quickest way to get job ad data is by using predefined 6-week "stock" windows and (automatically) downloading the query cache.
+
+To do this, you will need to (from this submodule `ojd_daps/dqa`) do:
+
+```python
+from data_getters import get_cached_job_ads  # will automatically download the cache, if it is out-of-date
+
+job_ads = get_cached_job_ads('21-12-2020', '01-02-2021')
+```
+
+A list of the permitted "stock" windows can be found using:
+
+```python
+from data_getters import get_valid_cache_dates
+
+dates = get_valid_cache_dates()
+
+dates[0]
+
+>>> ('21-12-2020', '01-02-2021')
+```
+
+Note that for the above processes you _don't_ need to be signed into the Nesta VPN (or be sat in Nesta HQ), however if you would like to retrieve job descriptions you will need to sign into the VPN prior to fetching data from the database:
+
+```python
+from data_getters import fetch_descriptions
+
+fetch_descriptions(['42640775', '42640774'])
+
+>>> {'42640774': '[ Mu client and accountancy practice is looking for an experienced Bookkeeper to assist in managing their day-to-day accounting and finance requirements. Confidentiality, excellent organisational skills and accuracy are important qualifications for this position,  as well as good customer relations and the ability to communicate clearly. The ideal candidate for this position is a skilled multi-tasker, is reliable and is committed to consistently meeting deadlines. Duties:  Balance and maintain accurate ledgersMatch purchase orders with invoicesCoordinate bank deposits and report financial results on a regular basis to managementMonitor office expenses and tally and enter cash receiptsPay vendor invoices and track bank account balancesDevelop monthly financial statements, including cash flow, profit and loss statements and balance sheetsPrepare quarterly and monthly tax returns, along with payroll, operating and business taxes If the above is of interest to you then please APPLY NOW! ]',
+ '42640775': "[ We have a fantastic opportunity for an Apprentice seeking a role which will allow them to learn on the job, work with a fun and enthusiastic team in a beautiful setting and work their way up in the Education sector. Starting apprentice wage of £4.20per hour - then increase wages based on review of work performance 35 hours a week 8-4pm (this time is not rigid) , . Immediate start. The job role will include:  Answering telephone queriesBooking appointmentsPhotocopying and printing documentsPosting letters / opening letters Stock taking of resources/ equipmentDrafting staff weekly rotaUpdating children's time tables / register, mealsRaising invoices and sending out invoicesAttending staff meetings / note takingCovering in the rooms when neededAny other duties to promote the smooth running of the business Personal Specification:  Must be keen to learn,Attention to detail is importantGood communicationPositive attitude to workCustomer service focussed ]"}
+```
+
+## Getting raw data from source (database or S3)
 
 The `data_getters` submodule in this directory will help you to get ahold of both raw and processed data. The code is well documented, and if you are curious about functionality we recommend that you inspect the docstrings.
 

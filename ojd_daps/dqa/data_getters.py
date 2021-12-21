@@ -10,13 +10,15 @@ from random import uniform
 from functools import lru_cache
 from collections import defaultdict, Counter
 from decimal import Decimal
-from itertools import groupby
+from itertools import groupby, starmap
 from datetime import datetime as dt
+from datetime import timedelta
 import networkx
 from sqlalchemy import func as sql_func
 from sqlalchemy import desc as sql_desc
 import logging
 import os
+from copy import deepcopy
 
 from daps_utils import db
 from ojd_daps import config
@@ -31,6 +33,13 @@ from ojd_daps.orms.link_tables import (
 )
 from ojd_daps.dqa.vector_utils import download_vectors
 from ojd_daps.dqa.shared_cache import SharedCache, FakeCache
+
+# Define limits of the dataset and snapshot window
+DEFAULT_START_DATE = dt(2021, 2, 1)  # 1st Feb
+DEFAULT_END_DATE = dt.today()  # Now
+JOB_AD_LIFESPAN_IN_WEEKS = 6
+MIN_DUPE_WEIGHT = 0.95
+MAX_DUPE_WEIGHT = 1
 
 CENTRAL_BUCKET = "most_recent_jobs"
 DATE_FORMAT = "%d-%m-%Y"
@@ -88,6 +97,64 @@ def make_date_filter(from_date, to_date):
     return date_filter
 
 
+def monday_of_week(date):
+    """Calculate the Monday of the week for the given date."""
+    return date - timedelta(days=date.weekday())
+
+
+def iterdates(
+    start_date=DEFAULT_START_DATE,
+    end_date=DEFAULT_END_DATE,
+    timespan_weeks=JOB_AD_LIFESPAN_IN_WEEKS,
+):
+    """Yield ranges {[start,end]_date} in units of {JOB_AD_LIFESPAN_IN_WEEKS}."""
+    # Monday to Monday of the given date range
+    start_date = monday_of_week(start_date)
+    end_date = monday_of_week(end_date)
+    while start_date <= end_date:
+        # nominally the last {JOB_AD_LIFESPAN_IN_WEEKS}
+        yield start_date - timedelta(weeks=timespan_weeks), start_date
+        start_date += timedelta(weeks=1)
+
+
+def date_pair_to_str(from_date, to_date):
+    return from_date.strftime(DATE_FORMAT), to_date.strftime(DATE_FORMAT)
+
+
+def get_snapshot_ads(from_date, to_date):
+    """Get job adverts in the range from_date --> end_date."""
+    job_ads = get_db_job_ads(
+        chunksize=10_000,
+        return_description=False,
+        return_features=True,
+        deduplicate=True,
+        min_dupe_weight=MIN_DUPE_WEIGHT,
+        max_dupe_weight=MAX_DUPE_WEIGHT,
+        split_dupes_by_location=True,
+        from_date=from_date.strftime(DATE_FORMAT),
+        to_date=to_date.strftime(DATE_FORMAT),
+    )
+    # Remove duplicates
+    return list(filter(lambda ad: not ad["features"]["is_duplicate"], job_ads))
+
+
+def get_valid_cache_dates():
+    return list(starmap(date_pair_to_str, iterdates()))
+
+
+def get_cached_job_ads(from_date, to_date):
+    valid_dates = get_valid_cache_dates()
+    if (from_date, to_date) not in valid_dates:
+        raise ValueError(
+            "get_cached_job_ads only works with "
+            f"(from_date, to_date) in {valid_dates}."
+        )
+
+    from_date = dt.strptime(from_date, DATE_FORMAT)
+    to_date = dt.strptime(to_date, DATE_FORMAT)
+    return get_snapshot_ads(from_date, to_date)
+
+
 @cache.memoize(chunksize=1000)
 def get_db_job_ads(
     limit=None,
@@ -95,8 +162,8 @@ def get_db_job_ads(
     return_features=False,
     return_description=True,
     deduplicate=False,
-    min_dupe_weight=0.95,
-    max_dupe_weight=1,
+    min_dupe_weight=MIN_DUPE_WEIGHT,
+    max_dupe_weight=MAX_DUPE_WEIGHT,
     split_dupes_by_location=False,
     from_date=None,
     to_date=None,
@@ -176,7 +243,7 @@ def get_db_job_ads(
                 total_rows += 1
                 row = db.object_as_dict(obj)
                 if features:
-                    row["features"] = features[row["id"]]
+                    row["features"] = features.get(row["id"], {})
                 if deduplicate:
                     row["features"]["is_duplicate"] = row["id"] in dupe_ids
                 yield row
@@ -213,7 +280,7 @@ def get_duplicate_ids(min_weight, max_weight, split_by_location, from_date, to_d
 
 
 @cache.memoize(chunksize=1000)
-def get_duplicate_subgraphs(min_weight=1, max_weight=1):
+def get_duplicate_subgraphs(min_weight=MIN_DUPE_WEIGHT, max_weight=MAX_DUPE_WEIGHT):
     """Generate every group of duplicate job ads, for all time"""
     logging.info("Retrieving duplicate subgraphs")
     with db.db_session("production") as session:
@@ -224,8 +291,25 @@ def get_duplicate_subgraphs(min_weight=1, max_weight=1):
     yield from map(list, networkx.connected_components(graph))
 
 
+def fetch_descriptions(ids, chunksize=10000):
+    """Fetch job ad descriptions for the provided job ad IDs"""
+    descriptions = {}
+    with db.db_session("production") as session:
+        base_query = session.query(RawJobAd.id, RawJobAd.description)
+        ichunk = 0
+        while ichunk < chunksize:
+            query_ids = ids[ichunk : ichunk + chunksize]
+            query = base_query.filter(RawJobAd.id.in_(query_ids))
+            print(str(query))
+            print(query_ids)
+            for _id, description in query.all():
+                descriptions[_id] = description
+            ichunk += chunksize
+    return descriptions
+
+
 @cache.memoize(chunksize=1000)
-def get_subgraphs_by_location(min_weight=1, max_weight=1):
+def get_subgraphs_by_location(min_weight=MIN_DUPE_WEIGHT, max_weight=MAX_DUPE_WEIGHT):
     """
     A typical use-case is that we want to consider job ads as distinct
     if they're advertised in different locations. This method will
@@ -514,7 +598,7 @@ def get_skills():
     # NB: skills are presorted in the query
     for entity, rows in groupby(_get_skills(), key=lambda row: row["entity"]):
         lookup = skills_lookup[str(entity)]  # One lookup for common values of entity
-        for row in rows:
+        for row in map(deepcopy, rows):
             row.update(lookup)  # update faster than new dict
             job_id = row.pop("job_id")
             grouped_rows[job_id].append(row)

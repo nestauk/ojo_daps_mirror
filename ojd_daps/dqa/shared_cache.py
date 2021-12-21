@@ -87,6 +87,11 @@ class GeneratorCacheMixin:
 
                 # Null status: evaluate the generator until finished
                 if status is ENOVAL:
+                    logger.warning(
+                        f" No cache found for {func.__name__} with "
+                        f"args {args} and kwargs {kwargs}.\n"
+                        "Evaluating this now, but it may take some time.\n"
+                    )
                     i = 0
                     chunk = []
                     for result in func(*args, **kwargs):
@@ -149,7 +154,7 @@ class SharedCacheMixin(GeneratorCacheMixin):
 
         # Synchronise from S3 to local if not up to date
         if not is_up_to_date(self.directory, self.bucket):
-            logger.info("Synchronising diskcache from S3:")
+            logger.info("Synchronising diskcache from S3 (this may take 5 minutes)")
             prepare_local(self.directory)
             download_from_s3(self.directory, self.bucket)
             # Re-initialise to pick up the new cache

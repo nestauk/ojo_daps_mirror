@@ -1,5 +1,5 @@
 metaflow_extensions @ git+https://github.com/nestauk/metaflow_extensions@master#egg=metaflow_extensions
-daps-utils @ git+https://github.com/nestauk/daps_utils@dev#egg=daps-utils
+daps-utils @ git+https://github.com/nestauk/daps_utils@119_luigi_deco#egg=daps-utils
 metaflow @ git+https://github.com/jaklinger/metaflow@more_throttle#egg=metaflow
 pytest-timeout==1.4.2
 python_dateutil==2.8.1
@@ -12,3 +12,4 @@ bs4==0.0.1
 lxml>=4.6.3
 cloudscraper>=1.2.48
 urllib3>=1.26.5
+sh==1.14.2

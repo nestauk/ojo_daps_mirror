@@ -3,6 +3,7 @@ from diskcache.core import DBNAME
 from pathlib import Path
 from decimal import Decimal
 import time
+import sh
 import boto3
 import logging
 from tqdm import tqdm
@@ -84,29 +85,35 @@ def get_all_paths_s3(bucket, directory):
                                        and an S3 key (relative path of the file)
     """
     s3 = boto3.client("s3")
-    for obj in s3.list_objects(Bucket=bucket, Prefix=f"{LATEST}/").get("Contents", []):
-        s3_key = obj["Key"][len(LATEST) + 1 :]  # Strip "latest/"
-        filepath = Path(directory) / s3_key
-        yield str(filepath), s3_key
+    paginator = s3.get_paginator("list_objects_v2")
+    pages = paginator.paginate(Bucket=bucket, Prefix=f"{LATEST}/")
+    for page in pages:
+        for obj in page.get("Contents", []):
+            s3_key = obj["Key"][len(LATEST) + 1 :]  # Strip "latest/"
+            filepath = Path(directory) / s3_key
+            yield str(filepath), s3_key
 
 
 @retry(stop=stop_after_attempt(10), wait=wait_fixed(3) + wait_random(0, 2))
-def sync_file(filepath, bucket, key, operation_name):
+def s3_cp(source, target, **kwargs):
     """
-    Either upload or download a file to/from S3 using either
-    s3.upload_file or s3_download_file.
+    Copy data from source to target. Include flags as kwargs
+    such as recursive=True and include=xyz
     """
-    s3 = boto3.client("s3")
-    operation = getattr(s3, f"{operation_name}_file")
-    operation(Bucket=bucket, Key=f"{LATEST}/{key}", Filename=filepath)
+    args = []
+    for flag_name, flag_value in kwargs.items():
+        if flag_value is not False:  # i.e. --quiet=False means omit --quiet
+            args.append(f"--{flag_name}")
+        if flag_value is not True:  # i.e. --quiet=True means --quiet
+            args.append(flag_value)
+    args += [source, target]
+    sh.aws("s3", "cp", *args)
 
 
 def upload_to_s3(directory, bucket):
     """Upload the contents of local `directory` to remote `bucket`."""
     logging.info("Synchronising diskcache to S3...")
-    paths = list(get_all_paths_local(directory))
-    for filepath, key in tqdm(paths):
-        sync_file(filepath=filepath, bucket=bucket, key=key, operation_name="upload")
+    s3_cp(directory, f"s3://{bucket}/{LATEST}", quiet=True, recursive=True)
     # Also upload a MARKER file - to officially timestamp this upload
     boto3.client("s3").put_object(
         Body=timestamp(), Bucket=bucket, Key=f"{LATEST}/{MARKER}"
@@ -115,19 +122,8 @@ def upload_to_s3(directory, bucket):
 
 def download_from_s3(directory, bucket):
     """Dowload the contents of remote `bucket` to local `directory`."""
-    paths = list(get_all_paths_s3(bucket=bucket, directory=directory))
-    logging.info("Synchronising diskcache from S3...")
-    for filepath, key in tqdm(paths):
-        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
-        sync_file(bucket=bucket, key=key, filepath=filepath, operation_name="download")
-    # Also download the MARKER file - so that timestamps are sync'd
-    filepath = str(Path(directory) / MARKER)
-    sync_file(
-        bucket=bucket,
-        key=MARKER,  # Note that sync_file will prepend '{LATEST}/'
-        filepath=filepath,
-        operation_name="download",
-    )
+    logging.info("Synchronising diskcache from S3... (this may take 5 minutes)")
+    s3_cp(f"s3://{bucket}/{LATEST}", directory, quiet=True, recursive=True)
 
 
 def is_diskcache_file(filepath):

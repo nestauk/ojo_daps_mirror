@@ -6,7 +6,6 @@ from ojd_daps.dqa.shared_cache_utils import (
     get_all_paths_s3,
     upload_to_s3,
     download_from_s3,
-    sync_file,
     is_diskcache_file,
     is_diskcache_bucket,
     is_diskcache_directory,
@@ -132,19 +131,6 @@ def test_download_from_s3(mocked_s3, tmp_path):  # NB: pytest.tmp_path not temp_
         (f"{tmp_path}/directory_2/file_0.txt", "directory_2/file_0.txt"),
         (f"{tmp_path}/directory_2/file_1.txt", "directory_2/file_1.txt"),
     ]
-
-
-@mock.patch.object(boto3, "client")
-def test_sync_file_upload(mocked_client):
-    sync_file("the_filename", "the_bucket", "the_key", "do_something_to_the")
-
-    # Note that a method "do_something_to_the_file" has been called
-    args, kwargs = mocked_client().do_something_to_the_file.call_args
-    assert kwargs == {
-        "Bucket": "the_bucket",
-        "Key": f"{LATEST}/the_key",
-        "Filename": "the_filename",
-    }
 
 
 @pytest.mark.parametrize("filepath", ("cache.db", MARKER, "foo.val", "bar.val"))

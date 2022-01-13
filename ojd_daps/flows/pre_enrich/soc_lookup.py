@@ -6,12 +6,14 @@ A Flow for generating a lookup table of SOC job titles to SOC codes
 """
 import json
 from hashlib import md5
-from metaflow import FlowSpec, step, S3
-from daps_utils import talk_to_luigi, DapsFlowMixin
+
+from daps_utils import DapsFlowMixin
+
+from metaflow import FlowSpec, S3, step
 
 from ojd_daps.flows.enrich.labs.soc.metadata_utils import (
-    save_metadata_to_s3,
     load_json_from_s3,
+    save_metadata_to_s3,
 )
 
 
@@ -23,13 +25,9 @@ def short_hash(text):
     return int(short_code)
 
 
-@talk_to_luigi
 class SocMetadataFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
-        """
-        Starts the flow.
-        """
         save_metadata_to_s3()
         self.next(self.end)
 

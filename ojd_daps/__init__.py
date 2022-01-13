@@ -7,6 +7,7 @@ try:
 except ModuleNotFoundError as exc:  # For integration with setup.py
     print(exc)
     pass
+
 __version__ = load_current_version()
 ################################################################
 

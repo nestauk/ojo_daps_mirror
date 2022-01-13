@@ -6,9 +6,10 @@ A Flow for vectorising descriptions from job adverts.
 """
 import json
 
-from metaflow import FlowSpec, step, S3, batch, retry, pip
-from daps_utils import talk_to_luigi, DapsFlowMixin
+from daps_utils import DapsFlowMixin
 from daps_utils.db import object_as_dict
+
+from metaflow import FlowSpec, S3, batch, pip, retry, step
 
 import ojd_daps
 from ojd_daps.orms.raw_jobs import RawJobAd
@@ -59,16 +60,9 @@ def encode_job_ads(job_ads, decimal_places=5):
     return vectors
 
 
-@talk_to_luigi
 class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
-        """
-        Starts the flow.
-        """
-        # >>> Workaround for metaflow introspection
-        self.set_caller_pkg(ojd_daps)
-        # <<<
         self.next(self.get_descriptions)
 
     @step

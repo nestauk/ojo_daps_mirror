@@ -10,7 +10,9 @@ from datetime import datetime
 from metaflow import FlowSpec, step, S3, Parameter
 
 from ojd_daps.flows.common import flatten, get_chunks
-from daps_utils import talk_to_luigi
+
+from daps_utils import DapsFlowMixin
+
 
 S3_PATH = "s3://open-jobs-lake/most_recent_jobs/{level}/indeed/"
 CHUNKSIZE = 1000
@@ -106,15 +108,7 @@ def regex_search(regex, text):
     return value
 
 
-@talk_to_luigi
-class IndeedAdCurateFlow(FlowSpec):
-    production = Parameter("production", help="Run in production mode?", default=False)
-    job_board = Parameter("job_board", help="Which job board?", default="indeed")
-
-    @property
-    def test(self):
-        return not self.production
-
+class IndeedAdCurateFlow(FlowSpec, DapsFlowMixin):
     @property
     def s3_path(self):
         level = "test" if self.test else "production"
@@ -174,10 +168,10 @@ class IndeedAdCurateFlow(FlowSpec):
         """
         Save the data to the data lake.
         """
-        filename = f"extract-{self.job_board}_test-{self.test}.json"
+        filename = f"extract-indeed_test-{self.test}.json"
         with S3(run=self) as s3:
             data = json.dumps(self.data)
-            url = s3.put(filename, data)
+            s3.put(filename, data)
 
 
 if __name__ == "__main__":

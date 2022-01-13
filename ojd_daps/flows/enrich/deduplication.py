@@ -4,28 +4,24 @@ deduplication_flow
 A Flow for identifying duplicate job advert descriptions.
 """
 import json
-from metaflow import FlowSpec, step, S3, batch, pip
-from daps_utils import talk_to_luigi, DapsFlowMixin
+
+from daps_utils import DapsFlowMixin
+
+from metaflow import FlowSpec, S3, batch, pip, step
+
+from ojd_daps.orms.raw_jobs import RawJobAd
+
 from sqlalchemy import func
 
-import ojd_daps
-from ojd_daps.orms.raw_jobs import RawJobAd
 
 CHUNKSIZE = 10000
 INTERVAL = 56  # 8 weeks
 LIMIT = 2  # number of windows in testing
 
 
-@talk_to_luigi
 class DeduplicationFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
-        """
-        Starts the flow.
-        """
-        # >>> Workaround for metaflow introspection
-        self.set_caller_pkg(ojd_daps)
-        # <<<
         self.next(self.get_windows)
 
     @step

@@ -296,15 +296,14 @@ def fetch_descriptions(ids, chunksize=10000):
     descriptions = {}
     with db.db_session("production") as session:
         base_query = session.query(RawJobAd.id, RawJobAd.description)
+        query_ids = ids[:chunksize]
         ichunk = 0
-        while ichunk < chunksize:
-            query_ids = ids[ichunk : ichunk + chunksize]
+        while query_ids:
             query = base_query.filter(RawJobAd.id.in_(query_ids))
-            print(str(query))
-            print(query_ids)
             for _id, description in query.all():
                 descriptions[_id] = description
-            ichunk += chunksize
+            ichunk += 1
+            query_ids = ids[ichunk : ichunk * chunksize]
     return descriptions
 
 

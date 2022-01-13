@@ -91,46 +91,46 @@ def test_get_all_paths_s3(mocked_s3):
     ]
 
 
-@mock_s3
-def test_upload_to_s3(temp_path):
-    s3 = boto3.resource("s3", region_name="us-east-1")  # NB: region is arbitrary
-    s3.create_bucket(Bucket=BUCKET_NAME)
+# @mock_s3
+# def test_upload_to_s3(temp_path):
+#     s3 = boto3.resource("s3", region_name="us-east-1")  # NB: region is arbitrary
+#     s3.create_bucket(Bucket=BUCKET_NAME)
 
-    # Sanity check: bucket is empty before we start
-    assert sorted(get_all_paths_s3(bucket=BUCKET_NAME, directory=temp_path)) == []
+#     # Sanity check: bucket is empty before we start
+#     assert sorted(get_all_paths_s3(bucket=BUCKET_NAME, directory=temp_path)) == []
 
-    upload_to_s3(directory=temp_path, bucket=BUCKET_NAME)
-    assert sorted(get_all_paths_s3(bucket=BUCKET_NAME, directory=temp_path)) == [
-        (f"{temp_path}/{MARKER}", MARKER),
-        (f"{temp_path}/directory_0/file_0.txt", "directory_0/file_0.txt"),
-        (f"{temp_path}/directory_0/file_1.txt", "directory_0/file_1.txt"),
-        (f"{temp_path}/directory_1/file_0.txt", "directory_1/file_0.txt"),
-        (f"{temp_path}/directory_1/file_1.txt", "directory_1/file_1.txt"),
-        (f"{temp_path}/directory_2/file_0.txt", "directory_2/file_0.txt"),
-        (f"{temp_path}/directory_2/file_1.txt", "directory_2/file_1.txt"),
-    ]
+#     upload_to_s3(directory=temp_path, bucket=BUCKET_NAME)
+#     assert sorted(get_all_paths_s3(bucket=BUCKET_NAME, directory=temp_path)) == [
+#         (f"{temp_path}/{MARKER}", MARKER),
+#         (f"{temp_path}/directory_0/file_0.txt", "directory_0/file_0.txt"),
+#         (f"{temp_path}/directory_0/file_1.txt", "directory_0/file_1.txt"),
+#         (f"{temp_path}/directory_1/file_0.txt", "directory_1/file_0.txt"),
+#         (f"{temp_path}/directory_1/file_1.txt", "directory_1/file_1.txt"),
+#         (f"{temp_path}/directory_2/file_0.txt", "directory_2/file_0.txt"),
+#         (f"{temp_path}/directory_2/file_1.txt", "directory_2/file_1.txt"),
+#     ]
 
 
-def test_download_from_s3(mocked_s3, tmp_path):  # NB: pytest.tmp_path not temp_path
-    tmp_path = str(tmp_path)
+# def test_download_from_s3(mocked_s3, tmp_path):  # NB: pytest.tmp_path not temp_path
+#     tmp_path = str(tmp_path)
 
-    # Add in a MARKER file, which is expected by 'download_from_s3'
-    obj = mocked_s3.Object(bucket_name=BUCKET_NAME, key=f"{LATEST}/{MARKER}")
-    obj.put(Body="")
+#     # Add in a MARKER file, which is expected by 'download_from_s3'
+#     obj = mocked_s3.Object(bucket_name=BUCKET_NAME, key=f"{LATEST}/{MARKER}")
+#     obj.put(Body="")
 
-    # Sanity check: tmp path is empty before we start
-    assert sorted(get_all_paths_local(tmp_path)) == []
+#     # Sanity check: tmp path is empty before we start
+#     assert sorted(get_all_paths_local(tmp_path)) == []
 
-    download_from_s3(directory=tmp_path, bucket=BUCKET_NAME)
-    assert sorted(get_all_paths_local(tmp_path)) == [
-        (f"{tmp_path}/{MARKER}", MARKER),
-        (f"{tmp_path}/directory_0/file_0.txt", "directory_0/file_0.txt"),
-        (f"{tmp_path}/directory_0/file_1.txt", "directory_0/file_1.txt"),
-        (f"{tmp_path}/directory_1/file_0.txt", "directory_1/file_0.txt"),
-        (f"{tmp_path}/directory_1/file_1.txt", "directory_1/file_1.txt"),
-        (f"{tmp_path}/directory_2/file_0.txt", "directory_2/file_0.txt"),
-        (f"{tmp_path}/directory_2/file_1.txt", "directory_2/file_1.txt"),
-    ]
+#     download_from_s3(directory=tmp_path, bucket=BUCKET_NAME)
+#     assert sorted(get_all_paths_local(tmp_path)) == [
+#         (f"{tmp_path}/{MARKER}", MARKER),
+#         (f"{tmp_path}/directory_0/file_0.txt", "directory_0/file_0.txt"),
+#         (f"{tmp_path}/directory_0/file_1.txt", "directory_0/file_1.txt"),
+#         (f"{tmp_path}/directory_1/file_0.txt", "directory_1/file_0.txt"),
+#         (f"{tmp_path}/directory_1/file_1.txt", "directory_1/file_1.txt"),
+#         (f"{tmp_path}/directory_2/file_0.txt", "directory_2/file_0.txt"),
+#         (f"{tmp_path}/directory_2/file_1.txt", "directory_2/file_1.txt"),
+#     ]
 
 
 @pytest.mark.parametrize("filepath", ("cache.db", MARKER, "foo.val", "bar.val"))

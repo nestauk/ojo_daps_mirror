@@ -6,7 +6,7 @@ import json
 import re
 import boto3
 
-from daps_utils import talk_to_luigi, DapsFlowMixin
+from daps_utils import DapsFlowMixin
 
 from ojd_daps.flows.common import get_chunks
 from metaflow import S3, FlowSpec, batch, step, retry, pip
@@ -74,6 +74,14 @@ def get_salary_info(soup):
     salary_info["salary_competitive"] = is_competitive
     salary_info["salary_negotiable"] = is_negotiable
     return salary_info
+
+
+def get_meta(span, itemprop):
+    """Extract 'baz' from <span itemprop='foo'> <meta itemprop='bar' content='baz'>"""
+    meta = span.find("meta", itemprop=itemprop)
+    if meta is not None:
+        meta = meta.get("content")  # None if doesn't exist
+    return meta  # None if either <meta> or <meta content=""> don't exist
 
 
 def get_reed_details(text):
@@ -165,7 +173,6 @@ def get_keys(max_keys=1000, limit=None, offset=0):
     return keys
 
 
-@talk_to_luigi
 class ReedAdCurateFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):

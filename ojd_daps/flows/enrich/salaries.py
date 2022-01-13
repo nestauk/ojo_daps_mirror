@@ -5,25 +5,23 @@ salaries_flow
 A Flow for extracting a standardised salary from raw job adverts.
 """
 import json
-from metaflow import FlowSpec, step, S3, batch, pip
-from daps_utils import talk_to_luigi, DapsFlowMixin
+
+from daps_utils import DapsFlowMixin
 from daps_utils.db import object_as_dict
 
 from labs.salaries.common import extract_salary
+
+from metaflow import FlowSpec, S3, batch, pip, step
+
 from ojd_daps.flows.common import get_chunks
 from ojd_daps.orms.raw_jobs import RawJobAd
-import ojd_daps
 
 CHUNKSIZE = 20000
 
 
-@talk_to_luigi
 class SalariesFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
-        # >>> Workaround for metaflow introspection
-        self.set_caller_pkg(ojd_daps)
-        # <<<
         self.next(self.get_adverts)
 
     @step
@@ -32,7 +30,7 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
         Gets adverts, breaks up into chunks of 20,000.
         """
         limit = 2 * CHUNKSIZE if self.test else None
-        with self.db_session(database="dev") as session:
+        with self.db_session(database="production") as session:
             jobad_query = session.query(
                 RawJobAd.id,
                 RawJobAd.raw_salary_unit,

@@ -4,16 +4,19 @@ location lookup
 
 A Flow for generating a lookup table of UK place names to GSS and NUTS locations
 """
-import boto3
 import csv
-from io import StringIO
-import re
 import json
+import re
 from functools import lru_cache
+from io import StringIO
 
-from metaflow import FlowSpec, step, S3, batch, pip
-from ojd_daps.flows.common import get_chunks, flatten
-from daps_utils import talk_to_luigi, DapsFlowMixin
+import boto3
+
+from daps_utils import DapsFlowMixin
+
+from metaflow import FlowSpec, S3, batch, pip, step
+
+from ojd_daps.flows.common import flatten, get_chunks
 
 CHUNKSIZE = 1000
 # Lookups for converting ONS names to human-readable
@@ -165,7 +168,6 @@ def transform_metadata(row):
     return row
 
 
-@talk_to_luigi
 class LocationMetadataFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):

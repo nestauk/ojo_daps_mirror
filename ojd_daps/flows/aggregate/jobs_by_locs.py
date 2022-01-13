@@ -5,24 +5,19 @@ jobs_by_locations_flow
 A Flow for aggregating jobs by locations.
 """
 import json
-from sqlalchemy import func
-from metaflow import FlowSpec, step, S3
 
-import ojd_daps
+from daps_utils import DapsFlowMixin
+
+from metaflow import FlowSpec, S3, step
+
 from ojd_daps.orms.link_tables import JobAdLocationLink
-from daps_utils import talk_to_luigi, DapsFlowMixin
+
+from sqlalchemy import func
 
 
-@talk_to_luigi
 class LocationsFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
-        """
-        Starts the flow.
-        """
-        # >>> Workaround for metaflow introspection
-        self.set_caller_pkg(ojd_daps)
-        # <<<
         self.next(self.get_data)
 
     @step

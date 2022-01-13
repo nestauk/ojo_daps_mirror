@@ -149,6 +149,7 @@ class JobCurateTask(CurateTask):
             container_kwargs=self.container_kwargs,
             requires_task=self.requires_task,
             requires_task_kwargs=self.requires_task_kwargs,
+            stale_breadcrumb=self.stale_breadcrumb,
         )
         yield MetaflowTask(**mftask_kwargs)
         yield PrepareDatabaseTask(

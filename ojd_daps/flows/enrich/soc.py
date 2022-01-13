@@ -6,17 +6,17 @@ A Flow for extracting a standardised SOC code from raw job titles.
 """
 import json
 
-from metaflow import S3, FlowSpec, step, batch, pip
-from labs.soc.substring_utils import apply_model
-from labs.soc.common import load_json_from_s3
-
-from ojd_daps.flows.common import get_chunks
-from daps_utils import DapsFlowMixin, talk_to_luigi
+from daps_utils import DapsFlowMixin
 from daps_utils.db import object_as_dict
 
-import ojd_daps
-from ojd_daps.orms.raw_jobs import RawJobAd
+from labs.soc.common import load_json_from_s3
+from labs.soc.substring_utils import apply_model
+
+from metaflow import FlowSpec, S3, batch, pip, step
+
+from ojd_daps.flows.common import get_chunks
 from ojd_daps.flows.pre_enrich.soc_lookup import short_hash
+from ojd_daps.orms.raw_jobs import RawJobAd
 
 CHUNKSIZE = 30000
 
@@ -36,15 +36,10 @@ def generate_soc_ids(soc_codes, std_titles):
             yield short_hash(soc + title)
 
 
-@talk_to_luigi
 class SocMatchFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
         """Gets job titles, breaks up into chunks of CHUNKSIZE"""
-        # >>> Workaround for metaflow introspection
-        self.set_caller_pkg(ojd_daps)
-        # <<<
-
         # Read all job titles
         limit = 2 * CHUNKSIZE if self.test else None  # 2 chunks for testing
         with self.db_session(database="production") as session:

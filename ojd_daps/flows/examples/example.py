@@ -16,14 +16,18 @@ Explanation:
     * package-suffixes=.txt will include the local requirements.txt in the AWS batch bundle
     * datastore=s3 is stipulated by metaflow when using the @batch decorator, so it can write to somewhere!
 """
-from daps_utils import talk_to_luigi
-import requests_cache
+import json
+
+from daps_utils import DapsFlowMixin
+
+from metaflow import FlowSpec, Parameter, S3, batch, pip, step
+
 import numpy as np
 
-from metaflow import FlowSpec, step, S3
-from metaflow import Parameter, batch, pip
-import json
 import requests
+
+import requests_cache
+
 
 ALLOWABLE_CODES = (404, 200)
 requests_cache.install_cache(
@@ -94,9 +98,7 @@ def generate_page_numbers(first_page, nominal_last_page, actual_last_page):
     return range(first_page, last_page)
 
 
-@talk_to_luigi
-class BatchDemoFlow(FlowSpec):
-    production = Parameter("production", help="Run in production mode?", default=False)
+class BatchDemoFlow(FlowSpec, DapsFlowMixin):
     swapi_type = Parameter(
         "swapi_type",
         help="One of 'people', 'planets' and 'starships'",
@@ -104,10 +106,6 @@ class BatchDemoFlow(FlowSpec):
     )
     first_page = Parameter("first_page", help="First API page to hit", default=1)
     last_page = Parameter("last_page", help="Last API page to hit", default=None)
-
-    @property
-    def test(self):
-        return not self.production
 
     @step
     def start(self):

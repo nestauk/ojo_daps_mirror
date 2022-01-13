@@ -7,15 +7,16 @@ A Flow for extracting a standardised location from raw locations.
 import json
 import re
 from collections import defaultdict
-from metaflow import FlowSpec, step, S3
 
-from daps_utils import talk_to_luigi
 from daps_utils.flow import DapsFlowMixin
+
+from metaflow import FlowSpec, S3, step
 
 import ojd_daps
 from ojd_daps.flows.enrich.common import get_chunks
-from ojd_daps.orms.std_features import Location
 from ojd_daps.orms.raw_jobs import RawJobAd as JobAd  # abbreviate
+
+from ojd_daps.orms.std_features import Location
 
 CHUNKSIZE = 300000  # Leads to output filesizes of ~20MB
 
@@ -77,16 +78,9 @@ def define_processed_location(raw_location):
     return process_location(raw_location) if len(result) == 0 else result[0]
 
 
-@talk_to_luigi
 class LocationsFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
-        """
-        Starts the flow.
-        """
-        # >>> Workaround for metaflow introspection
-        self.set_caller_pkg(ojd_daps)
-        # <<<
         self.next(self.get_locations)
 
     @step
@@ -94,7 +88,7 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
         """
         Gets locations.
         """
-        with self.db_session(database=self.db_name) as session:
+        with self.db_session() as session:
             query = session.query(JobAd.id, JobAd.job_location_raw, JobAd.data_source)
             query = query.filter(JobAd.job_location_raw is not None)
             self.job_locations = {

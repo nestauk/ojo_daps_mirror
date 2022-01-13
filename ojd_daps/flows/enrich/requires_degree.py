@@ -4,25 +4,19 @@ requires_degree flow
 A Metaflow Flow for extracting a degree requirement (true/false) from raw job adverts.
 """
 import json
-from common import generate_description_queries, retrieve_job_ads
-from metaflow import FlowSpec, step, S3, batch, pip
 
-import ojd_daps
-from daps_utils import talk_to_luigi, DapsFlowMixin
+from common import generate_description_queries, retrieve_job_ads
+
+from daps_utils import DapsFlowMixin
+
+from metaflow import FlowSpec, S3, batch, pip, step
 
 CHUNKSIZE = 5000
 
 
-@talk_to_luigi
 class RequiresDegreeFlow(FlowSpec, DapsFlowMixin):
     @step
     def start(self):
-        """
-        Starts the flow.
-        """
-        # >>> Workaround for metaflow introspection
-        self.set_caller_pkg(ojd_daps)
-        # <<<
         self.next(self.get_adverts)
 
     @step

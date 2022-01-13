@@ -1,5 +1,7 @@
+import pytest
 from unittest import mock
 import os
+from datetime import datetime
 
 os.environ["DATA_GETTERS_DISKCACHE"] = "0"
 
@@ -17,12 +19,60 @@ from ojd_daps.dqa.data_getters import (
     get_subgraphs_by_location,
     identify_duplicates,
     get_entity_chunks,
+    monday_of_week,
+    iterdates,
+    get_snapshot_ads,
 )
 
 from ojd_daps.dqa.data_getters import Decimal
 
 
 PATH = "ojd_daps.dqa.data_getters.{}"
+
+
+def strptime(date):
+    return datetime.strptime(date, "%d-%m-%Y")
+
+
+@pytest.mark.parametrize(
+    "date,monday",
+    [
+        ("07-11-2021", "01-11-2021"),
+        ("08-11-2021", "08-11-2021"),  # A Monday
+        ("09-11-2021", "08-11-2021"),
+        ("10-11-2021", "08-11-2021"),
+        ("11-11-2021", "08-11-2021"),
+        ("12-11-2021", "08-11-2021"),
+        ("13-11-2021", "08-11-2021"),
+        ("14-11-2021", "08-11-2021"),
+        ("15-11-2021", "15-11-2021"),
+        ("16-11-2021", "15-11-2021"),
+        ("17-11-2021", "15-11-2021"),
+        ("05-01-2012", "02-01-2012"),  # A couple of other dates
+        ("17-02-1997", "17-02-1997"),
+    ],
+)
+def test_monday_of_week(date, monday):
+    date = strptime(date)
+    monday = strptime(monday)
+    assert monday.weekday() == 0
+    assert monday_of_week(date) == monday
+
+
+def test_iterdates():
+    assert list(
+        iterdates(
+            start_date=datetime(2021, 2, 1),
+            end_date=datetime(2021, 3, 1),
+            timespan_weeks=2,
+        )
+    ) == [
+        (datetime(2021, 1, 18, 0, 0), datetime(2021, 2, 1, 0, 0)),
+        (datetime(2021, 1, 25, 0, 0), datetime(2021, 2, 8, 0, 0)),
+        (datetime(2021, 2, 1, 0, 0), datetime(2021, 2, 15, 0, 0)),
+        (datetime(2021, 2, 8, 0, 0), datetime(2021, 2, 22, 0, 0)),
+        (datetime(2021, 2, 15, 0, 0), datetime(2021, 3, 1, 0, 0)),
+    ]
 
 
 @mock.patch(PATH.format("get_metaflow_bucket"))

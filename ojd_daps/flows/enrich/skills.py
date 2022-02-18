@@ -62,6 +62,7 @@ class SkillsFlow(FlowSpec, DapsFlowMixin):
             s3.put(filename, data)
         self.next(self.join_extracted_skills)
 
+    @batch(cpu=8, memory=16000)
     @step
     def join_extracted_skills(self, inputs):
         """

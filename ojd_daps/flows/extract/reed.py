@@ -13,7 +13,7 @@ from metaflow import S3, FlowSpec, batch, step, retry, pip
 
 BUCKET = "open-jobs-lake"
 PREFIX = "most_recent_jobs/production/reed/"
-CHUNKSIZE = 1000
+CHUNKSIZE = 5000
 TEST_OFFSET = 800000  # Skip Jan/Feb/March
 
 # Mapping of orm fields to field names in the raw HTML

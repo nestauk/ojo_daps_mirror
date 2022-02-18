@@ -1,4 +1,4 @@
-metaflow_extensions @ git+https://github.com/nestauk/metaflow_extensions@25_fix_project_env#egg=metaflow_extensions
+metaflow_extensions @ git+https://github.com/nestauk/metaflow_extensions@5035596186e8910aab7fc9b9ad86b9bd6e2a3e91#egg=metaflow_extensions
 daps-utils @ git+https://github.com/nestauk/daps_utils@119_luigi_deco#egg=daps-utils
 metaflow @ git+https://github.com/jaklinger/metaflow@more_throttle#egg=metaflow
 pytest-timeout==1.4.2

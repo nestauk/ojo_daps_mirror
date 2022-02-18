@@ -9,8 +9,6 @@ import json
 from daps_utils import DapsFlowMixin
 from daps_utils.db import object_as_dict
 
-from labs.salaries.common import extract_salary
-
 from metaflow import FlowSpec, S3, batch, pip, step
 
 from ojd_daps.flows.common import get_chunks
@@ -24,6 +22,7 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
     def start(self):
         self.next(self.get_adverts)
 
+    @batch(cpu=8, memory=16000)
     @step
     def get_adverts(self):
         """
@@ -44,13 +43,15 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
         self.chunks = get_chunks(job_ads, CHUNKSIZE)
         self.next(self.extract_salaries, foreach="chunks")
 
-    @batch(cpu=4)  # cpu=4 to limit the number of containers per batch (diskspace issue)
+    @batch(cpu=8, memory=16000)
     @pip(path="requirements.txt")
     @step
     def extract_salaries(self):
         """
         Matches locations
         """
+        from labs.salaries.common import extract_salary
+
         salaries = []
         for job_ad in self.input:
             salary_dict = extract_salary(job_ad)
@@ -66,6 +67,7 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
             s3.put(filename, data)
         self.next(self.join_extracted_salaries)
 
+    @batch(cpu=8, memory=16000)
     @step
     def join_extracted_salaries(self, inputs):
         """

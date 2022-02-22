@@ -1,0 +1,7 @@
+description: >-
+  Mix of skills mentioned in online job adverts that have been assigned to each SOC code, in the most recent month.
+fields:
+  - template: LOCATION_NAME
+  - template: LOCATION_CODE
+  - template: SKILL_GROUP
+  - template: PERCENTAGE

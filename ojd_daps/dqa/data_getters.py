@@ -118,11 +118,39 @@ def iterdates(
 
 
 def date_pair_to_str(from_date, to_date):
+    """Convert pairs of dates to string"""
     return from_date.strftime(DATE_FORMAT), to_date.strftime(DATE_FORMAT)
 
 
-def get_snapshot_ads(from_date, to_date):
-    """Get job adverts in the range from_date --> end_date."""
+def get_snapshot_dates():
+    """
+    Get the current snapshot dates, which are defined as the 6 weeks up to
+    the 15th of the previous month.
+    """
+    now = dt.today()
+
+    # Find the previous month
+    first_day_of_current_month = now.replace(day=1)
+    last_day_of_previous_month = first_day_of_current_month - timedelta(days=1)
+
+    # Get the 15th of the month, which is the "snapshot" date
+    to_date = last_day_of_previous_month.replace(day=15)
+
+    # Get JOB_AD_LIFESPAN weeks before this date
+    from_date = to_date - timedelta(weeks=JOB_AD_LIFESPAN_IN_WEEKS)
+    return from_date, to_date
+
+
+def get_snapshot_ads(from_date=None, to_date=None):
+    """
+    Get job adverts in the range from_date --> end_date.
+
+    The defaults are the "snapshot dates", which are the 6 weeks up to
+    the 15th of the previoud month.
+    """
+    if from_date is None and to_date is None:
+        from_date, to_date = get_snapshot_dates()
+
     job_ads = get_db_job_ads(
         chunksize=10_000,
         return_description=False,
@@ -139,6 +167,7 @@ def get_snapshot_ads(from_date, to_date):
 
 
 def get_valid_cache_dates():
+    """iterdates as string"""
     return list(starmap(date_pair_to_str, iterdates()))
 
 

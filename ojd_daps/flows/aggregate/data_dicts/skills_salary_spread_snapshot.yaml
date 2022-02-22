@@ -1,0 +1,11 @@
+description: >-
+  The median and quartiles (lower and upper) of annualised advertised job salaries by skills mentioned in the job description. Salaries are typically advertised as a range (£`MIN`-£`MAX`). This creates two salary series: the lower values from these ranges (`MIN`), and the upper values (`MAX`). In instances where a single salary is given we assign both £`MIN` and £`MAX` to be equal to the single salary.
+type: https://schema.org/MonetaryAmountDistribution
+fields:
+  - template: SKILL_GROUP
+  - template: MIN_LOWER_Q
+  - template: MIN_MEDIAN
+  - template: MIN_UPPER_Q
+  - template: MAX_LOWER_Q
+  - template: MAX_MEDIAN
+  - template: MAX_UPPER_Q

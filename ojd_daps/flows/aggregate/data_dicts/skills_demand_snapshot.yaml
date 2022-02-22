@@ -1,0 +1,13 @@
+description: >-
+  Mix of skills mentioned in online job adverts, in the most recent month.
+fields:
+  - name: Level 0 skill groups
+    type: https://schema.org/name
+    description: Name of the level 0 (least granular) skill group
+  - name: Level 1 skill groups
+    type: https://schema.org/name
+    description: Name of the level 1 skill group
+  - name: Level 2 skill groups
+    type: https://schema.org/name
+    description: Name of the level 2 (most granular) skill group
+  - template: PERCENTAGE

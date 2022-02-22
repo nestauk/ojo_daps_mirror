@@ -1,0 +1,6 @@
+description: >-
+  Weekly count of posted job advertisments by NUTS 2 region on a given Monday, including the total sum of job advertisments in the 6 week period leading up to the given date stamp.
+fields:
+  - template: DATE
+  - template: LOCATION_NAME
+  - template: LOCATION_CODE

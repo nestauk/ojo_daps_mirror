@@ -1,0 +1,5 @@
+description: >-
+  Weekly count of posted job advertisments on a given Monday, including the total sum of job advertisments in the 6 week period leading up to the given date stamp.
+fields:
+  - template: DATE
+  - template: VOLUME

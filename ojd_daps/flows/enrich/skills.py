@@ -28,7 +28,7 @@ class SkillsFlow(FlowSpec, DapsFlowMixin):
         self.queries = generate_description_queries(self, CHUNKSIZE)
         self.next(self.extract_skills, foreach="queries")
 
-    @batch(cpu=4, memory=16000)
+    @batch(cpu=2, memory=16000)
     @pip(path="requirements.txt")
     @step
     def extract_skills(self):
@@ -62,7 +62,7 @@ class SkillsFlow(FlowSpec, DapsFlowMixin):
             s3.put(filename, data)
         self.next(self.join_extracted_skills)
 
-    @batch(cpu=8, memory=16000)
+    @batch(cpu=2, memory=16000)
     @step
     def join_extracted_skills(self, inputs):
         """

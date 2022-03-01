@@ -185,7 +185,7 @@ class LocationMetadataFlow(FlowSpec, DapsFlowMixin):
         self.metadata = get_chunks(metadata[:limit], chunksize)
         self.next(self.transform_metadata, foreach="metadata")
 
-    @batch(cpu=8, memory=16000)
+    @batch(cpu=2, memory=16000)
     @pip(path="requirements_nuts.txt")
     @step
     def transform_metadata(self):

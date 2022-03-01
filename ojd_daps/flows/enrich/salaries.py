@@ -22,7 +22,7 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
     def start(self):
         self.next(self.get_adverts)
 
-    @batch(cpu=8, memory=16000)
+    @batch(2, memory=16000)
     @step
     def get_adverts(self):
         """
@@ -43,7 +43,7 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
         self.chunks = get_chunks(job_ads, CHUNKSIZE)
         self.next(self.extract_salaries, foreach="chunks")
 
-    @batch(cpu=8, memory=16000)
+    @batch(cpu=2, memory=16000)
     @pip(path="requirements.txt")
     @step
     def extract_salaries(self):
@@ -67,7 +67,7 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
             s3.put(filename, data)
         self.next(self.join_extracted_salaries)
 
-    @batch(cpu=8, memory=16000)
+    @batch(cpu=2, memory=16000)
     @step
     def join_extracted_salaries(self, inputs):
         """

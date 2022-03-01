@@ -83,7 +83,7 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
     def start(self):
         self.next(self.get_locations)
 
-    @batch(cpu=8, memory=16000)
+    @batch(cpu=2, memory=16000)
     @step
     def get_locations(self):
         """
@@ -98,7 +98,7 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
             }
         self.next(self.match_locations)
 
-    @batch(cpu=8, memory=16000)
+    @batch(cpu=2, memory=16000)
     @step
     def match_locations(self):
         """
@@ -114,7 +114,7 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
         ]
         self.next(self.end)
 
-    @batch(cpu=8, memory=16000)
+    @batch(cpu=2, memory=16000)
     @step
     def end(self):
         """Write the data out in chunks to limit the file size as the dataset grows"""

@@ -65,7 +65,7 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
     def start(self):
         self.next(self.get_descriptions)
 
-    @batch(cpu=8, memory=32000)
+    @batch(cpu=2, memory=32000)
     @step
     def get_descriptions(self):
         """
@@ -96,7 +96,7 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
 
     @retry
     @pip(path="requirements_transform.txt")
-    @batch(cpu=8, memory=32000)
+    @batch(cpu=2, memory=32000)
     @step
     def vectorise_descriptions(self):
         """
@@ -113,7 +113,7 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
             s3.put(filename, data)
         self.next(self.join_vectors)
 
-    @batch(cpu=8, memory=32000)
+    @batch(cpu=2, memory=32000)
     @step
     def join_vectors(self, inputs):
         """

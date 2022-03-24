@@ -1,2 +1,2 @@
-git+git://github.com/jaklinger/metaflow@more_throttle
+git+https://github.com/jaklinger/metaflow@more_throttle
 numpy==1.21.1

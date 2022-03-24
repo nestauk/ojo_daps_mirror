@@ -1,4 +1,4 @@
-git+git://github.com/jaklinger/metaflow@more_throttle
+git+https://github.com/jaklinger/metaflow@more_throttle
 requests_cache>=0.5.2
 numpy>=1.21.1
 requests>=2.22.0

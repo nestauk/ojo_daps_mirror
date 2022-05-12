@@ -22,7 +22,7 @@ class SalariesFlow(FlowSpec, DapsFlowMixin):
     def start(self):
         self.next(self.get_adverts)
 
-    @batch(2, memory=16000)
+    @batch(cpu=2, memory=16000)
     @step
     def get_adverts(self):
         """

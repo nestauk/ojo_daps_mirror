@@ -65,7 +65,7 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
     def start(self):
         self.next(self.get_descriptions)
 
-    @batch(cpu=2, memory=32000)
+    @batch(cpu=2, memory=64000)
     @step
     def get_descriptions(self):
         """
@@ -96,7 +96,7 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
 
     @retry
     @pip(path="requirements_transform.txt")
-    @batch(cpu=2, memory=32000)
+    @batch(cpu=2, memory=64000)
     @step
     def vectorise_descriptions(self):
         """

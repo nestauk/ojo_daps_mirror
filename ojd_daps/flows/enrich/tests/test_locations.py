@@ -1,22 +1,11 @@
 from unittest import mock
 
 from ojd_daps.flows.enrich.locations import (
-    process_location,
-    define_processed_location,
     location_lookup,
 )
 
 OUTCODE_LOCATION = "Sheffield, S1"
 LOCATION = "Telford, Shropshire"
-
-
-def test_process_location():
-    assert process_location(LOCATION) == "telford"
-
-
-def test_define_processed_location():
-    assert define_processed_location(LOCATION) == "telford"
-    assert define_processed_location(OUTCODE_LOCATION) == "S1"
 
 
 def test_location_lookup():

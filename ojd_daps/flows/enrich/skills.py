@@ -29,7 +29,7 @@ class SkillsFlow(FlowSpec, DapsFlowMixin):
         self.next(self.extract_skills, foreach="queries")
 
     @batch(cpu=2, memory=16000)
-    @pip(path="requirements.txt")
+    @pip(path="requirements_skills.txt")
     @step
     def extract_skills(self):
         """

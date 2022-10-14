@@ -2,6 +2,12 @@
 Flow to extract raw job advert information from reed ad
 html files.
 """
+import os
+
+os.system(
+    f"pip install -r {os.path.dirname(os.path.realpath(__file__))}/requirements.txt 1> /dev/null"
+)
+
 import json
 import re
 import boto3
@@ -9,7 +15,7 @@ import boto3
 from daps_utils import DapsFlowMixin
 
 from ojd_daps.flows.common import get_chunks
-from metaflow import S3, FlowSpec, batch, step, retry, pip
+from metaflow import S3, FlowSpec, batch, step, retry
 
 BUCKET = "open-jobs-lake"
 PREFIX = "most_recent_jobs/production/reed/"
@@ -195,7 +201,6 @@ class ReedAdCurateFlow(FlowSpec, DapsFlowMixin):
 
     @retry
     @batch
-    @pip(path="requirements.txt")
     @step
     def extract_ad_details(self):
         """

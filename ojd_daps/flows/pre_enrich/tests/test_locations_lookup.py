@@ -59,10 +59,6 @@ def test_extract_fields():
     }
 
 
-def test_NutsFinder():
-    assert NutsFinder() is NutsFinder()
-
-
 def test_find_nuts():
     nutses = list(find_nuts(57.057719, -4.500908))
     assert len(nutses) > 0

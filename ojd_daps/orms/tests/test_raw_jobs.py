@@ -29,6 +29,11 @@ def test_raw_job_ad():
             "contract_type_raw": "Permanent",
             "closing_date_raw": date_parser.parse("Nov 20 2020"),
             "description": "Great Opportunity.",
+            "type": "Entry",
+            "sector": "Law",
+            "parent_sector": "Legal",
+            "knowledge_domain": "Administration",
+            "occupation": "Administrator",
         }
     ]
     # Insert the data in one transaction

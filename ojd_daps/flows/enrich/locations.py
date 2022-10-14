@@ -35,47 +35,8 @@ def location_lookup(session):
     lookup = defaultdict(list)
     query = session.query(Location.ipn_18_code, Location.ipn_18_name)
     for code, name in query.all():
-        lookup[process_location(name)].append(code)
+        lookup[name].append(code)
     return lookup
-
-
-def process_location(raw_location):
-    """Function that does a small amount of preprocessing of the raw
-    location to get it ready for matching.
-
-    Parameters
-    ----------
-    raw_location : str
-        Unaltered raw location
-
-    Returns
-    -------
-    processed_location : str
-        Processed location for matching
-    """
-    processed_location = (
-        raw_location.split(",")[0].replace(r"[^\w\s]", "").lower().replace(" ", "_")
-    )
-    return processed_location
-
-
-def define_processed_location(raw_location):
-    """Produces processed location for matching
-
-    Parameters
-    ----------
-    outcode : regex
-        Regular expression to identify postcode area.
-    raw_location : str
-        Unaltered location from raw job ad.
-
-    Returns
-    -------
-    processed_location : str
-        Location now ready for matching
-    """
-    result = re.compile(r"[A-Z]{1,2}[0-9][0-9A-Z]?\s?").findall(raw_location)
-    return process_location(raw_location) if len(result) == 0 else result[0]
 
 
 class LocationsFlow(FlowSpec, DapsFlowMixin):
@@ -92,10 +53,7 @@ class LocationsFlow(FlowSpec, DapsFlowMixin):
         with self.db_session() as session:
             query = session.query(JobAd.id, JobAd.job_location_raw, JobAd.data_source)
             query = query.filter(JobAd.job_location_raw is not None)
-            self.job_locations = {
-                _id: (define_processed_location(loc), src)
-                for _id, loc, src in query.all()
-            }
+            self.job_locations = {_id: (loc, src) for _id, loc, src in query.all()}
         self.next(self.match_locations)
 
     @batch(cpu=2, memory=16000)

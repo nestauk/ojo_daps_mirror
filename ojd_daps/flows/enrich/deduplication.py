@@ -69,8 +69,8 @@ class DeduplicationFlow(FlowSpec, DapsFlowMixin):
                 self.window_queries.append((raw_queries, count))
         self.next(self.find_similar_vectors, foreach="window_queries")
 
-    @batch(cpu=8, memory=64000)
-    @pip(path="requirements.txt")
+    @batch(cpu=8, memory=48000)
+    @pip(path="requirements_dedup.txt")
     @step
     def find_similar_vectors(self):
         """

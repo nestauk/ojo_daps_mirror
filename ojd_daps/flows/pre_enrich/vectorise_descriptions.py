@@ -16,7 +16,7 @@ from ojd_daps.orms.raw_jobs import RawJobAd
 
 
 MODEL_NAME = "distilbert-base-nli-stsb-mean-tokens"
-CHUNKSIZE = 5000
+CHUNKSIZE = 50000
 
 
 def load_model(model_name):
@@ -65,7 +65,7 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
     def start(self):
         self.next(self.get_descriptions)
 
-    @batch(cpu=2, memory=64000)
+    @batch(cpu=2, memory=48000)
     @step
     def get_descriptions(self):
         """
@@ -96,7 +96,7 @@ class VectoriseDescriptionsFlow(FlowSpec, DapsFlowMixin):
 
     @retry
     @pip(path="requirements_transform.txt")
-    @batch(cpu=2, memory=64000)
+    @batch(cpu=2, memory=48000)
     @step
     def vectorise_descriptions(self):
         """

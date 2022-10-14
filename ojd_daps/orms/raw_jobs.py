@@ -32,6 +32,11 @@ class RawJobAd(Base):
     contract_type_raw = fixture("text")
     closing_date_raw = fixture("text")
     description = fixture("text")
+    type = fixture("text")
+    sector = fixture("text")
+    parent_sector = fixture("text")
+    knowledge_domain = fixture("text")
+    occupation = fixture("text")
 
 
 class ReedAdDetail(Base):

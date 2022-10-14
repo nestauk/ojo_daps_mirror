@@ -118,9 +118,7 @@ class JobCurateTask(CurateTask):
         """Fairly standard implementation of the abstract curate_data method"""
         for chunk in self.retrieve_data(s3path, f"extract-{self.job_board}"):
             data = [
-                {k: v for k, v in row.items() if k not in self.exclude_fields}
-                for row in chunk
-                if row["id"] is not None
+                {k: v for k, v in row.items()} for row in chunk if row["id"] is not None
             ]
             # Standardise any fields
             for row in data:

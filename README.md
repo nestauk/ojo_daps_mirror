@@ -8,15 +8,17 @@
 
 ## About the Open Jobs Observatory
 
-The [Open Jobs Observatory](https://www.nesta.org.uk/data-visualisation-and-interactive/open-jobs-observatory) is a pilot project that provides free and up-to-date insights on the skills requested in UK job adverts. The Open Jobs Observatory was created by [Nesta](http://www.nesta.org.uk/), in partnership with the [Department for Education](https://www.gov.uk/government/organisations/department-for-education). This page contains all the data series released from the Observatory, as well as our code for extracting key variables from adverts (which include skills<!--, locations and occupation--> and locations).
+The [Open Jobs Observatory](https://www.nesta.org.uk/data-visualisation-and-interactive/open-jobs-observatory) was a pilot project that provided free and up-to-date insights on the skills requested in UK job adverts. The Open Jobs Observatory was created by [Nesta](http://www.nesta.org.uk/), in partnership with the [Department for Education](https://www.gov.uk/government/organisations/department-for-education). This page contains all the data series released from the Observatory, as well as our code for extracting key variables from adverts (which include skills<!--, locations and occupation--> and locations).
 
 ### Why did we build the Observatory?
 
 Job adverts are a rich source of labour market information; they allow us to quickly detect changes in the skills demanded by employers, and explore how skill demands vary by geography<!--, occupation--> and industry. Information on skill demands is not available from official vacancy statistics, and the need for timely and high-quality intelligence about skills has only been heightened by the COVID-19 pandemic.
 
-The Observatory is a pilot project and we welcome any feedback and questions. Please email dataanalytics\<at\>nesta.org.uk.
+The Observatory was a pilot project and we welcome any feedback and questions. Please email dataanalytics\<at\>nesta.org.uk.
 
 ## **Download the Data**: Labour Market Statistics
+
+NOTE: AS OF EARLY 2022, DATA RELEASES ARE NO LONGER MAINTAINED
 
 These data series are highly experimental and are subject to revision. All series are updated on a monthly basis, although there may be occasional short delays.
 

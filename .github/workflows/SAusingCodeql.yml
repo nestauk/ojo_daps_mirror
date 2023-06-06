@@ -1,0 +1,33 @@
+name: CodeQL Analysis
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  analyze:
+    name: Analyze code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: python
+
+      - name: Build CodeQL database
+        run: |
+          codeql database create --language=python --source-root=. --name=my-database
+          codeql database analyze --database=my-database --output=results.sarif
+
+      - name: Upload CodeQL results
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: results.sarif
